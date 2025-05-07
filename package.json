@@ -5,8 +5,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js",
-    "prod": "NODE_ENV=production node server.js"
-
+    "prod": "NODE_ENV=production node server.js",
+    "seed": "node scripts/seedData.js"
   },
   "author": "",
   "license": "ISC",
@@ -18,6 +18,8 @@
     "express": "^5.1.0",
     "mongoose": "^8.14.1",
     "morgan": "^1.10.0",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   }
 }

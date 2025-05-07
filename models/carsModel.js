@@ -1,0 +1,48 @@
+const mongoose = require("mongoose");
+const carsSchema = new mongoose.Schema({
+  plateNumber: {
+    type: String,
+    unique: true,
+  },
+  brand: {
+    type: String,
+    required: true,
+  },
+  model: {
+    type: String,
+    required: true,
+  },
+  year: {
+    type: Number,
+    required: true,
+  },
+  color: {
+    type: String,
+    required: true,
+  },
+  driver: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Driver",
+  },
+  status: {
+    type: String,
+    enum: ["available", "in_use", "maintenance"],
+    default: "available",
+  },
+  maintenanceHistory: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Maintenance",
+    },
+  ],
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+module.exports = mongoose.model("Car", carsSchema);
