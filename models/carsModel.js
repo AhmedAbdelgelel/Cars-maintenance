@@ -29,6 +29,13 @@ const carsSchema = new mongoose.Schema({
     enum: ["available", "in_use", "maintenance"],
     default: "available",
   },
+  meterReading: {
+    type: Number,
+    default: 0
+  },
+  lastMeterUpdate: {
+    type: Date
+  },
   maintenanceHistory: [
     {
       type: mongoose.Schema.Types.ObjectId,

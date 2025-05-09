@@ -35,6 +35,10 @@
         {
             "name": "SubCategories",
             "description": "Maintenance subcategory endpoints"
+        },
+        {
+            "name": "Car Meter",
+            "description": "Car meter reading image analysis endpoints"
         }
     ],
     "paths": {
@@ -1440,6 +1444,132 @@
                     }
                 }
             }
+        },
+        "/car-meter/analyze": {
+            "post": {
+                "summary": "Analyze a car meter image",
+                "tags": [ "Car Meter" ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "meterImage": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "description": "Image file of car meter"
+                                    }
+                                },
+                                "required": [ "meterImage" ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Image analyzed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/MeterReading"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or missing image",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to analyze image",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/car-meter/update-reading": {
+            "post": {
+                "summary": "Update a car with meter reading",
+                "tags": [ "Car Meter" ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MeterUpdateInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Car meter reading updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Car meter reading updated successfully"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Car"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or missing data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Car not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -1475,6 +1605,14 @@
                         "type": "string",
                         "enum": [ "available", "in_use", "maintenance" ],
                         "example": "available"
+                    },
+                    "meterReading": {
+                        "type": "number",
+                        "example": 123456
+                    },
+                    "lastMeterUpdate": {
+                        "type": "string",
+                        "format": "date-time"
                     },
                     "createdAt": {
                         "type": "string",
@@ -1840,6 +1978,54 @@
                         "example": "Resource not found"
                     }
                 }
+            },
+            "MeterReading": {
+                "type": "object",
+                "properties": {
+                    "meterReading": {
+                        "type": "object",
+                        "properties": {
+                            "rawText": {
+                                "type": "string",
+                                "example": "123456 km\nOil Check\nService Due: 5000 km"
+                            },
+                            "possibleReadings": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "value": {
+                                            "type": "string",
+                                            "example": "123456"
+                                        },
+                                        "context": {
+                                            "type": "string",
+                                            "example": "123456 km"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "imagePath": {
+                        "type": "string",
+                        "example": "/uploads/1621234567890.jpg"
+                    }
+                }
+            },
+            "MeterUpdateInput": {
+                "type": "object",
+                "properties": {
+                    "carId": {
+                        "type": "string",
+                        "example": "60d21b4667d0d8992e610c85"
+                    },
+                    "meterReading": {
+                        "type": "number",
+                        "example": 123456
+                    }
+                },
+                "required": [ "carId", "meterReading" ]
             }
         }
     }
