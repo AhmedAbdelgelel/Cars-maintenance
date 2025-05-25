@@ -4,8 +4,7 @@ const FormData = require('form-data');
 const ApiError = require('../utils/apiError');
 const Car = require('../models/carsModel');
 
-const AZURE_VISION_ENDPOINT = process.env.AZURE_VISION_ENDPOINT ;
-const AZURE_VISION_KEY = process.env.AZURE_VISION_KEY ;
+
 
 exports.analyzeMeterImage = async (req, res, next) => {
   if (!req.file) {
@@ -60,14 +59,15 @@ exports.updateCarMeterReading = async (req, res, next) => {
 };
 
 async function analyzeImage(imagePath) {
-  const readEndpoint = `${AZURE_VISION_ENDPOINT}vision/v3.2/read/analyze`;
-  
+
+  const readEndpoint = `${process.env.AZURE_VISION_ENDPOINT}vision/v3.2/read/analyze`;
+
   const formData = new FormData();
   formData.append('file', fs.createReadStream(imagePath));
   
   const response = await axios.post(readEndpoint, formData, {
     headers: {
-      'Ocp-Apim-Subscription-Key': AZURE_VISION_KEY,
+      'Ocp-Apim-Subscription-Key': process.env.AZURE_VISION_KEY,
       ...formData.getHeaders()
     }
   });
@@ -81,7 +81,7 @@ async function analyzeImage(imagePath) {
     
     const resultResponse = await axios.get(operationLocation, {
       headers: {
-        'Ocp-Apim-Subscription-Key': AZURE_VISION_KEY
+        'Ocp-Apim-Subscription-Key': process.env.AZURE_VISION_KEY
       }
     });
     

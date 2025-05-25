@@ -11,8 +11,8 @@
     },
     "servers": [
         {
-            "url": "http://localhost:3000/api",
-            "description": "Development Server"
+        "url": "https://srv830738.hstgr.cloud/api",
+        "description": "Production Server"
         }
     ],
     "tags": [
