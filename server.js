@@ -56,14 +56,14 @@ const server = app.listen(PORT, () => {
   );
 });
 
-server.on("unhandledRejection", (err) => {
+process.on("unhandledRejection", (err) => {
   console.log("Unhandled Rejection at:", err.stack || err);
   server.close(() => {
     process.exit(1);
   });
 });
 
-server.on("uncaughtException", (err) => {
+process.on("uncaughtException", (err) => {
   console.log("Uncaught Exception thrown:", err.stack || err);
   server.close(() => {
     process.exit(1);

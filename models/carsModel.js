@@ -20,10 +20,12 @@ const carsSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  driver: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Driver",
-  },
+  driver: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Driver",
+    },
+  ],
   status: {
     type: String,
     enum: ["available", "in_use", "maintenance"],
@@ -31,10 +33,10 @@ const carsSchema = new mongoose.Schema({
   },
   meterReading: {
     type: Number,
-    default: 0
+    default: 0,
   },
   lastMeterUpdate: {
-    type: Date
+    type: Date,
   },
   maintenanceHistory: [
     {
