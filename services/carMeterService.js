@@ -8,17 +8,81 @@ exports.analyzeMeterImage = async (req, res, next) => {
   if (!req.file) {
     return next(new ApiError("Please upload an image file", 400));
   }
-
   try {
+    const driver = req.driver;
+    let car = null;
+
+    if (!driver) {
+      return next(
+        new ApiError("No driver found. Authentication required", 401)
+      );
+    }
+
+    if (!driver.car) {
+      return next(new ApiError("No car is assigned to this driver", 400));
+    }
+
+    car = await Car.findById(driver.car);
+
+    if (!car) {
+      return next(new ApiError("The assigned car could not be found", 404));
+    }
     const result = await analyzeImage(req.file.path);
 
     const meterReading = extractMeterReading(result);
 
+    // Determine what reading to save - either explicitly selected or auto-detected
+    let readingToSave;
+
+    if (req.body.selectedReading) {
+      // If user explicitly selects a reading, use that
+      readingToSave = Number(req.body.selectedReading);
+    } else if (
+      meterReading.possibleReadings &&
+      meterReading.possibleReadings.length > 0
+    ) {
+      // Auto-select the first (usually largest) number if no selection was made
+      // Sort readings by numeric value to find the largest one (likely the odometer)
+      const sortedReadings = [...meterReading.possibleReadings].sort(
+        (a, b) => Number(b.value) - Number(a.value)
+      );
+
+      // Get the first (largest) reading that's likely to be an odometer
+      const likelyOdometer = sortedReadings.find((r) => Number(r.value) > 1000);
+
+      if (likelyOdometer) {
+        readingToSave = Number(likelyOdometer.value);
+      }
+    }
+
+    // Only save if we have a valid reading to save
+    if (readingToSave) {
+      const currentDate = new Date();
+
+      car.meterReading = readingToSave;
+      car.lastMeterUpdate = currentDate;
+      await car.save();
+
+      // Update driver meter reading
+      driver.lastMeterReading = readingToSave;
+      driver.lastMeterUpdate = currentDate;
+
+      // Update the carMeter field in driver document
+      driver.carMeter = {
+        reading: readingToSave,
+        updateDate: currentDate,
+      };
+
+      await driver.save();
+    }
     res.status(200).json({
       status: "success",
       data: {
         meterReading,
         imagePath: `/${req.file.path}`,
+        driverId: driver._id,
+        carId: car._id,
+        savedReading: readingToSave || null,
       },
     });
   } catch (error) {
@@ -26,33 +90,57 @@ exports.analyzeMeterImage = async (req, res, next) => {
   }
 };
 
-exports.updateCarMeterReading = async (req, res, next) => {
-  const { carId, meterReading } = req.body;
-
-  if (!carId || !meterReading) {
-    return next(new ApiError("Car ID and meter reading are required", 400));
-  }
+exports.updateDriverMeterReading = async (req, res, next) => {
+  const { meterReading } = req.body;
+  const currentDate = new Date();
 
   try {
-    const car = await Car.findById(carId);
+    const driver = req.driver;
 
-    if (!car) {
-      return next(new ApiError(`No car found with this id: ${carId}`, 404));
+    if (!driver) {
+      return next(
+        new ApiError("No driver found. Authentication required", 401)
+      );
     }
 
+    if (!driver.car) {
+      return next(new ApiError("No car is assigned to this driver", 400));
+    }
+
+    const car = await Car.findById(driver.car);
+
+    if (!car) {
+      return next(new ApiError("The assigned car could not be found", 404));
+    }
+
+    // Update car meter reading
     car.meterReading = meterReading;
-    car.lastMeterUpdate = new Date();
+    car.lastMeterUpdate = currentDate;
     await car.save();
+
+    // Update driver meter reading in one place
+    driver.carMeter = {
+      reading: meterReading,
+      updateDate: currentDate,
+    };
+
+    // Keep these fields for backward compatibility
+    driver.lastMeterReading = meterReading;
+    driver.lastMeterUpdate = currentDate;
+
+    await driver.save();
 
     res.status(200).json({
       status: "success",
       message: "Car meter reading updated successfully",
       data: {
-        car,
+        driver,
       },
     });
   } catch (error) {
-    return next(new ApiError(`Failed to update car: ${error.message}`, 500));
+    return next(
+      new ApiError(`Failed to update meter reading: ${error.message}`, 500)
+    );
   }
 };
 

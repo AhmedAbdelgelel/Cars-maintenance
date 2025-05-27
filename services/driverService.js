@@ -6,7 +6,8 @@ const ApiError = require("../utils/apiError");
 exports.getAllDrivers = async (req, res) => {
   const drivers = await Driver.find().populate({
     path: "car",
-    select: "brand model plateNumber year color status",
+    select:
+      "brand model plateNumber year color status meterReading lastMeterUpdate",
   });
 
   res.status(200).json({
@@ -19,7 +20,8 @@ exports.getAllDrivers = async (req, res) => {
 exports.getDriverById = async (req, res, next) => {
   const driver = await Driver.findById(req.params.id).populate({
     path: "car",
-    select: "brand model plateNumber year color status",
+    select:
+      "brand model plateNumber year color status meterReading lastMeterUpdate",
   });
 
   if (!driver) {
@@ -28,10 +30,19 @@ exports.getDriverById = async (req, res, next) => {
     );
   }
 
-  res.status(200).json({
+  // Format the response to explicitly include carMeter
+  const responseData = {
     status: "success",
-    data: driver,
-  });
+    data: {
+      ...driver.toObject(),
+      carMeterInfo: {
+        reading: driver.carMeter ? driver.carMeter.reading : 0,
+        updateDate: driver.carMeter ? driver.carMeter.updateDate : null,
+      },
+    },
+  };
+
+  res.status(200).json(responseData);
 };
 
 exports.getDriverByPhoneNumber = async (req, res, next) => {
@@ -39,7 +50,8 @@ exports.getDriverByPhoneNumber = async (req, res, next) => {
     phoneNumber: req.params.phoneNumber,
   }).populate({
     path: "car",
-    select: "brand model plateNumber year color status",
+    select:
+      "brand model plateNumber year color status meterReading lastMeterUpdate",
   });
 
   if (!driver) {
@@ -139,12 +151,12 @@ exports.updateDriver = async (req, res, next) => {
   } else if (req.body.car === null && currentDriver.car) {
     await Car.findByIdAndUpdate(currentDriver.car, { $unset: { driver: 1 } });
   }
-
   const driver = await Driver.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
   }).populate({
     path: "car",
-    select: "brand model plateNumber year color status",
+    select:
+      "brand model plateNumber year color status meterReading lastMeterUpdate",
   });
 
   res.status(200).json({
@@ -212,15 +224,11 @@ exports.getDriverMe = async (req, res, next) => {
       );
     }
 
-    const driver = await Driver.findById(req.driver._id).populate({
-      path: "car",
-      select: "brand model plateNumber year color status",
-    });
+    // Use the driver from the request which already has all the data we need
+    // This is populated by the authMiddleware
+    const driver = req.driver;
 
-    if (!driver) {
-      return next(new ApiError("Driver not found", 404));
-    }
-
+    // Fetch maintenance history
     const maintenanceHistory = await Maintenance.find({
       driver: req.driver._id,
     })
@@ -238,6 +246,7 @@ exports.getDriverMe = async (req, res, next) => {
       })
       .sort("-date");
 
+    // Simple response that includes both driver (with carMeter) and maintenance history
     res.status(200).json({
       status: "success",
       data: {

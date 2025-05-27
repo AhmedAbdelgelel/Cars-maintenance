@@ -91,14 +91,34 @@ exports.login = async (req, res, next) => {
         new ApiError("Please provide phone number and password", 400)
       );
     }
-    const driver = await Driver.findOne({ phoneNumber }).select("+password");
+
+    // Get driver with password and populate car information
+    const driver = await Driver.findOne({ phoneNumber })
+      .select("+password")
+      .populate({
+        path: "car",
+        select:
+          "brand model plateNumber year color status meterReading lastMeterUpdate",
+      });
+
     if (!driver || !(await driver.correctPassword(password, driver.password))) {
       return next(new ApiError("Incorrect phone number or password", 401));
     }
+
     const { token, user } = createSendToken(driver);
+
+    // Add meter reading data explicitly
+    const meterData = {
+      lastMeterReading: driver.lastMeterReading,
+      lastMeterUpdate: driver.lastMeterUpdate,
+      carMeterReading: driver.car ? driver.car.meterReading : null,
+      carLastMeterUpdate: driver.car ? driver.car.lastMeterUpdate : null,
+    };
+
     res.status(200).json({
       status: "success",
       token,
+      meterData,
       data: {
         driver: user,
       },

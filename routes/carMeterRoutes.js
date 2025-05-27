@@ -4,7 +4,7 @@ const upload = require("../middlewares/upload");
 const { protect } = require("../middlewares/authMiddleware");
 const {
   analyzeMeterImage,
-  updateCarMeterReading,
+  updateDriverMeterReading,
 } = require("../services/carMeterService");
 
 router.post(
@@ -14,6 +14,6 @@ router.post(
   analyzeMeterImage
 );
 
-router.post("/update-reading", protect, updateCarMeterReading);
+router.post("/update-driver-reading", protect, updateDriverMeterReading);
 
 module.exports = router;

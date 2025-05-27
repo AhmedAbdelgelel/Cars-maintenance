@@ -17,7 +17,11 @@ exports.protect = async (req, res, next) => {
       );
     }
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    let currentUser = await Driver.findById(decoded.id);
+    let currentUser = await Driver.findById(decoded.id).populate({
+      path: "car",
+      select:
+        "brand model plateNumber year color status meterReading lastMeterUpdate",
+    });
     if (!currentUser) {
       currentUser = await Admin.findById(decoded.id);
       if (currentUser) {
