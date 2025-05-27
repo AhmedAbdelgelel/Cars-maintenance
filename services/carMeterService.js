@@ -5,22 +5,45 @@ const ApiError = require('../utils/apiError');
 const Car = require('../models/carsModel');
 
 
-
 exports.analyzeMeterImage = async (req, res, next) => {
   if (!req.file) {
     return next(new ApiError('Please upload an image file', 400));
   }
 
   try {
-    const result = await analyzeImage(req.file.path);
+    const driver = req.driver;
     
+    if (!driver.car) {
+      return next(new ApiError('No car is assigned to this driver', 400));
+    }
+    
+    const car = await Car.findById(driver.car);
+    if (!car) {
+      return next(new ApiError('The assigned car could not be found', 404));
+    }
+    
+    const result = await analyzeImage(req.file.path);
     const meterReading = extractMeterReading(result);
+    
+    let bestReading = 0;
+    if (meterReading.possibleReadings.length > 0) {
+      bestReading = parseInt(meterReading.possibleReadings[0].value, 10);
+    }
+    
+    if (bestReading > 0) {
+      if (bestReading > car.meterReading) {
+        car.meterReading = bestReading;
+        car.lastMeterUpdate = new Date();
+        await car.save();
+      }
+    }
     
     res.status(200).json({
       status: 'success',
       data: {
         meterReading,
-        imagePath: `/${req.file.path}`
+        imagePath: `/${req.file.path}`,
+        updatedCar: car
       }
     });
   } catch (error) {
@@ -29,17 +52,23 @@ exports.analyzeMeterImage = async (req, res, next) => {
 };
 
 exports.updateCarMeterReading = async (req, res, next) => {
-  const { carId, meterReading } = req.body;
+  const { meterReading } = req.body;
   
-  if (!carId || !meterReading) {
-    return next(new ApiError('Car ID and meter reading are required', 400));
+  if (!meterReading) {
+    return next(new ApiError('Meter reading is required', 400));
   }
   
   try {
-    const car = await Car.findById(carId);
+    const driver = req.driver;
+    
+    if (!driver.car) {
+      return next(new ApiError('No car is assigned to this driver', 400));
+    }
+    
+    const car = await Car.findById(driver.car);
     
     if (!car) {
-      return next(new ApiError(`No car found with this id: ${carId}`, 404));
+      return next(new ApiError('The assigned car could not be found', 404));
     }
     
     car.meterReading = meterReading;
@@ -59,7 +88,6 @@ exports.updateCarMeterReading = async (req, res, next) => {
 };
 
 async function analyzeImage(imagePath) {
-
   const readEndpoint = `${process.env.AZURE_VISION_ENDPOINT}vision/v3.2/read/analyze`;
 
   const formData = new FormData();

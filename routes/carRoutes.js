@@ -7,8 +7,17 @@ const {
   updateCar,
   deleteCar,
 } = require("../services/carsService");
+const { protect, restrictTo } = require("../services/authService");
 
-router.route("/").get(getAllCars).post(createCar);
-router.route("/:id").get(getCarById).put(updateCar).delete(deleteCar);
+router
+  .route("/")
+  .get(protect, restrictTo("admin"), getAllCars)
+  .post(protect, restrictTo("admin"), createCar);
+
+router
+  .route("/:id")
+  .get(protect, restrictTo("admin"), getCarById)
+  .put(protect, restrictTo("admin"), updateCar)
+  .delete(protect, restrictTo("admin"), deleteCar);
 
 module.exports = router;

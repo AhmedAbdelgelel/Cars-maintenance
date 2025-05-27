@@ -13,7 +13,11 @@
         {
         "url": "https://srv830738.hstgr.cloud/api",
         "description": "Production Server"
-        }
+        },
+        {
+            "url": "http://localhost:3000/api",
+            "description": "Development Server"
+     }
     ],
     "tags": [
         {
@@ -39,6 +43,14 @@
         {
             "name": "Car Meter",
             "description": "Car meter reading image analysis endpoints"
+        },
+        {
+            "name": "Authentication",
+            "description": "Driver authentication endpoints"
+        },
+        {
+            "name": "Admin",
+            "description": "Admin authentication and management endpoints"
         }
     ],
     "paths": {
@@ -46,6 +58,11 @@
             "get": {
                 "summary": "Get all cars",
                 "tags": [ "Cars" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "A list of cars",
@@ -78,6 +95,11 @@
             "post": {
                 "summary": "Create a new car",
                 "tags": [ "Cars" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -129,6 +151,11 @@
             "get": {
                 "summary": "Get a car by ID",
                 "tags": [ "Cars" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "parameters": [
                     {
                         "in": "path",
@@ -175,6 +202,11 @@
             "put": {
                 "summary": "Update a car",
                 "tags": [ "Cars" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "parameters": [
                     {
                         "in": "path",
@@ -235,6 +267,11 @@
             "delete": {
                 "summary": "Delete a car",
                 "tags": [ "Cars" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "parameters": [
                     {
                         "in": "path",
@@ -284,6 +321,11 @@
             "get": {
                 "summary": "Get all drivers",
                 "tags": [ "Drivers" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "A list of drivers",
@@ -312,61 +354,17 @@
                         }
                     }
                 }
-            },
-            "post": {
-                "summary": "Register a new driver",
-                "tags": [ "Drivers" ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/DriverInput"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Driver registered successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Driver registered successfully"
-                                        },
-                                        "data": {
-                                            "$ref": "#/components/schemas/Driver"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad request",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Error"
-                                }
-                            }
-                        }
-                    }
-                }
             }
         },
         "/drivers/{id}": {
             "get": {
                 "summary": "Get a driver by ID",
                 "tags": [ "Drivers" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "parameters": [
                     {
                         "in": "path",
@@ -413,6 +411,11 @@
             "put": {
                 "summary": "Update a driver",
                 "tags": [ "Drivers" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "parameters": [
                     {
                         "in": "path",
@@ -473,6 +476,11 @@
             "delete": {
                 "summary": "Delete a driver",
                 "tags": [ "Drivers" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "parameters": [
                     {
                         "in": "path",
@@ -522,6 +530,11 @@
             "get": {
                 "summary": "Get a driver by phone number",
                 "tags": [ "Drivers" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "parameters": [
                     {
                         "in": "path",
@@ -570,6 +583,11 @@
             "get": {
                 "summary": "Get maintenance records for a driver",
                 "tags": [ "Drivers", "Maintenance" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "parameters": [
                     {
                         "in": "path",
@@ -1445,10 +1463,573 @@
                 }
             }
         },
+        "/auth/register": {
+            "post": {
+                "summary": "Register a new driver",
+                "tags": [ "Authentication" ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Driver registered successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "driver": {
+                                                    "$ref": "#/components/schemas/Driver"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - validation error or driver already exists",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "summary": "Log in a driver",
+                "tags": [ "Authentication" ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Driver logged in successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "driver": {
+                                                    "$ref": "#/components/schemas/Driver"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - missing phone number or password",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - incorrect phone number or password",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/register": {
+            "post": {
+                "summary": "Register a new admin",
+                "tags": [ "Admin" ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminRegisterInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Admin registered successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "admin": {
+                                                    "$ref": "#/components/schemas/Admin"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - validation error or admin already exists",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/login": {
+            "post": {
+                "summary": "Log in an admin",
+                "tags": [ "Admin" ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminLoginInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Admin logged in successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "admin": {
+                                                    "$ref": "#/components/schemas/Admin"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - missing email or password",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - incorrect email or password",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin": {
+            "get": {
+                "summary": "Get all admins",
+                "tags": [ "Admin" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "A list of admins",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "results": {
+                                            "type": "number",
+                                            "example": 2
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "admins": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/Admin"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Admin access required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/{id}": {
+            "get": {
+                "summary": "Get an admin by ID",
+                "tags": [ "Admin" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The admin ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Admin details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "admin": {
+                                                    "$ref": "#/components/schemas/Admin"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Admin access required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Admin not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "Update an admin",
+                "tags": [ "Admin" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The admin ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminUpdateInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Admin updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Admin updated successfully"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "admin": {
+                                                    "$ref": "#/components/schemas/Admin"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Admin access required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Admin not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "Deactivate an admin",
+                "tags": [ "Admin" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The admin ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Admin deactivated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Admin deactivated successfully"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Admin access required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Admin not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/car-meter/analyze": {
             "post": {
                 "summary": "Analyze a car meter image",
                 "tags": [ "Car Meter" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -1469,7 +2050,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Image analyzed successfully",
+                        "description": "Image analyzed successfully and meter reading updated",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1480,7 +2061,19 @@
                                             "example": "success"
                                         },
                                         "data": {
-                                            "$ref": "#/components/schemas/MeterReading"
+                                            "type": "object",
+                                            "properties": {
+                                                "meterReading": {
+                                                    "$ref": "#/components/schemas/MeterReading/properties/meterReading"
+                                                },
+                                                "imagePath": {
+                                                    "type": "string",
+                                                    "example": "/uploads/1621234567890.jpg"
+                                                },
+                                                "updatedCar": {
+                                                    "$ref": "#/components/schemas/Car"
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -1488,7 +2081,17 @@
                         }
                     },
                     "400": {
-                        "description": "Invalid request or missing image",
+                        "description": "Invalid request, missing image, or driver has no car assigned",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication failed - missing or invalid token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1514,6 +2117,11 @@
             "post": {
                 "summary": "Update a car with meter reading",
                 "tags": [ "Car Meter" ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -1558,6 +2166,16 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Authentication failed - missing or invalid token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Car not found",
                         "content": {
@@ -1573,6 +2191,13 @@
         }
     },
     "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        },
         "schemas": {
             "Car": {
                 "type": "object",
@@ -1721,6 +2346,10 @@
                         "type": "string",
                         "example": "John Smith"
                     },
+                    "email": {
+                        "type": "string",
+                        "example": "john.smith@example.com"
+                    },
                     "phoneNumber": {
                         "type": "string",
                         "example": "123-456-7890"
@@ -1739,6 +2368,11 @@
                     },
                     "car": {
                         "$ref": "#/components/schemas/Car"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": ["driver", "admin"],
+                        "example": "driver"
                     }
                 }
             },
@@ -1748,6 +2382,10 @@
                     "name": {
                         "type": "string",
                         "example": "John Smith"
+                    },
+                    "email": {
+                        "type": "string",
+                        "example": "john.smith@example.com"
                     },
                     "phoneNumber": {
                         "type": "string",
@@ -1770,7 +2408,7 @@
                         "example": "60d21b4667d0d8992e610c85"
                     }
                 },
-                "required": [ "name", "phoneNumber", "nationalId", "licenseNumber", "address" ]
+                "required": [ "name", "email", "phoneNumber", "nationalId", "licenseNumber", "address" ]
             },
             "Maintenance": {
                 "type": "object",
@@ -2016,16 +2654,158 @@
             "MeterUpdateInput": {
                 "type": "object",
                 "properties": {
-                    "carId": {
-                        "type": "string",
-                        "example": "60d21b4667d0d8992e610c85"
-                    },
                     "meterReading": {
                         "type": "number",
                         "example": 123456
                     }
                 },
-                "required": [ "carId", "meterReading" ]
+                "required": [ "meterReading" ]
+            },
+            "RegisterInput": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "John Smith"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "password123",
+                        "minLength": 8
+                    },
+                    "phoneNumber": {
+                        "type": "string",
+                        "example": "123-456-7890"
+                    },
+                    "nationalId": {
+                        "type": "string",
+                        "example": "ABC123456"
+                    },
+                    "licenseNumber": {
+                        "type": "string",
+                        "example": "DL98765"
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "123 Main St, Anytown"
+                    },
+                    "car": {
+                        "type": "string",
+                        "example": "60d21b4667d0d8992e610c85"
+                    }
+                },
+                "required": [ "name", "password", "phoneNumber", "nationalId", "licenseNumber", "address" ]
+            },
+            "LoginInput": {
+                "type": "object",
+                "properties": {
+                    "phoneNumber": {
+                        "type": "string",
+                        "example": "123-456-7890"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "password123"
+                    }
+                },
+                "required": [ "phoneNumber", "password" ]
+            },
+            "Admin": {
+                "type": "object",
+                "properties": {
+                    "_id": {
+                        "type": "string",
+                        "example": "60d21b4667d0d8992e610c85"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "John Doe"
+                    },
+                    "email": {
+                        "type": "string",
+                        "example": "admin@example.com"
+                    },
+                    "phoneNumber": {
+                        "type": "string",
+                        "example": "123-456-7890"
+                    },
+                    "isActive": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-06-15T10:30:00.000Z"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-06-15T10:30:00.000Z"
+                    }
+                }
+            },
+            "AdminRegisterInput": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "John Doe"
+                    },
+                    "email": {
+                        "type": "string",
+                        "example": "admin@example.com"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "password123",
+                        "minLength": 8
+                    },
+                    "phoneNumber": {
+                        "type": "string",
+                        "example": "123-456-7890"
+                    }
+                },
+                "required": [ "name", "email", "password", "phoneNumber" ]
+            },
+            "AdminLoginInput": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "example": "admin@example.com"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "password123"
+                    }
+                },
+                "required": [ "email", "password" ]
+            },
+            "AdminUpdateInput": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "John Doe"
+                    },
+                    "email": {
+                        "type": "string",
+                        "example": "admin@example.com"
+                    },
+                    "phoneNumber": {
+                        "type": "string",
+                        "example": "123-456-7890"
+                    },
+                    "isActive": {
+                        "type": "boolean",
+                        "example": true
+                    }
+                }
             }
         }
     }
