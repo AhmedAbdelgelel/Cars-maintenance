@@ -9,60 +9,45 @@ const globalError = require("./middlewares/globalError");
 const notFound = require("./middlewares/notFound");
 const mountRoutes = require("./routes/mountRoutes");
 dotenv.config();
-
-// Connect to database
 connectDB();
-
 const app = express();
-
-// Middleware
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: function (origin, callback) {
+      callback(null, true);
+    },
     credentials: true,
   })
 );
-
 app.use(express.json());
-
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
   console.log(`mode: ${process.env.NODE_ENV}`);
 }
-
-// Swagger documentation
 app.use(
-  "/api-docs",
+  "/api/docs",
   swaggerUi.serve,
   swaggerUi.setup(swaggerDocument, {
     explorer: true,
     customCss: ".swagger-ui .topbar { display: none }",
   })
 );
-
-// Mount Routes
 mountRoutes(app);
-
-// Error handling
 app.use(notFound);
 app.use(globalError);
-
 const PORT = process.env.PORT ?? 3000;
-
 const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(
-    `API Documentation available at http://localhost:${PORT}/api-docs`
+    `API Documentation available at http://localhost:${PORT}/api/docs or http://srv830738.hstgr.cloud/api/docs`
   );
 });
-
 process.on("unhandledRejection", (err) => {
   console.log("Unhandled Rejection at:", err.stack || err);
   server.close(() => {
     process.exit(1);
   });
 });
-
 process.on("uncaughtException", (err) => {
   console.log("Uncaught Exception thrown:", err.stack || err);
   server.close(() => {

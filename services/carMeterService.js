@@ -13,6 +13,17 @@ exports.analyzeMeterImage = async (req, res, next) => {
   }
 
   try {
+    const driver = req.driver;
+
+    if (!driver.car) {
+      return next(new ApiError("No car is assigned to this driver", 400));
+    }
+
+    const car = await Car.findById(driver.car);
+    if (!car) {
+      return next(new ApiError("The assigned car could not be found", 404));
+    }
+
     const result = await analyzeImage(req.file.path);
 
     const meterReading = extractMeterReading(result);
@@ -40,7 +51,7 @@ exports.updateCarMeterReading = async (req, res, next) => {
     const car = await Car.findById(carId);
 
     if (!car) {
-      return next(new ApiError(`No car found with this id: ${carId}`, 404));
+      return next(new ApiError("The assigned car could not be found", 404));
     }
 
     car.meterReading = meterReading;

@@ -14,18 +14,15 @@ const maintenanceSchema = new mongoose.Schema({
       ref: "SubCategory",
     },
   ],
-  // المشاكل اللي حصلت في العربيه
   description: String,
   cost: {
     type: Number,
     required: true,
   },
-  //المصنعيه بتاعه الميكانيكي
   mechanicCost: {
     type: Number,
     required: true,
   },
-
   date: {
     type: Date,
     default: Date.now,

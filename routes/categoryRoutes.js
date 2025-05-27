@@ -1,4 +1,5 @@
 const express = require("express");
+const { protect, restrictTo } = require("../middlewares/authMiddleware");
 const router = express.Router();
 const {
   getAllCategories,
@@ -7,13 +8,13 @@ const {
   updateCategory,
   deleteCategory,
 } = require("../services/categoryService");
-
-router.route("/").get(getAllCategories).post(createCategory);
-
+router
+  .route("/")
+  .get(protect, restrictTo("admin", "driver"), getAllCategories)
+  .post(protect, restrictTo("admin"), createCategory);
 router
   .route("/:id")
-  .get(getCategoryById)
-  .put(updateCategory)
-  .delete(deleteCategory);
-
+  .get(protect, restrictTo("admin", "driver"), getCategoryById)
+  .put(protect, restrictTo("admin"), updateCategory)
+  .delete(protect, restrictTo("admin"), deleteCategory);
 module.exports = router;
