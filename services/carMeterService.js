@@ -4,26 +4,12 @@ const FormData = require("form-data");
 const ApiError = require("../utils/apiError");
 const Car = require("../models/carsModel");
 
-const AZURE_VISION_ENDPOINT = process.env.AZURE_VISION_ENDPOINT;
-const AZURE_VISION_KEY = process.env.AZURE_VISION_KEY;
-
 exports.analyzeMeterImage = async (req, res, next) => {
   if (!req.file) {
     return next(new ApiError("Please upload an image file", 400));
   }
 
   try {
-    const driver = req.driver;
-
-    if (!driver.car) {
-      return next(new ApiError("No car is assigned to this driver", 400));
-    }
-
-    const car = await Car.findById(driver.car);
-    if (!car) {
-      return next(new ApiError("The assigned car could not be found", 404));
-    }
-
     const result = await analyzeImage(req.file.path);
 
     const meterReading = extractMeterReading(result);
@@ -51,7 +37,7 @@ exports.updateCarMeterReading = async (req, res, next) => {
     const car = await Car.findById(carId);
 
     if (!car) {
-      return next(new ApiError("The assigned car could not be found", 404));
+      return next(new ApiError(`No car found with this id: ${carId}`, 404));
     }
 
     car.meterReading = meterReading;
@@ -71,14 +57,14 @@ exports.updateCarMeterReading = async (req, res, next) => {
 };
 
 async function analyzeImage(imagePath) {
-  const readEndpoint = `${AZURE_VISION_ENDPOINT}vision/v3.2/read/analyze`;
+  const readEndpoint = `${process.env.AZURE_VISION_ENDPOINT}vision/v3.2/read/analyze`;
 
   const formData = new FormData();
   formData.append("file", fs.createReadStream(imagePath));
 
   const response = await axios.post(readEndpoint, formData, {
     headers: {
-      "Ocp-Apim-Subscription-Key": AZURE_VISION_KEY,
+      "Ocp-Apim-Subscription-Key": process.env.AZURE_VISION_KEY,
       ...formData.getHeaders(),
     },
   });
@@ -92,7 +78,7 @@ async function analyzeImage(imagePath) {
 
     const resultResponse = await axios.get(operationLocation, {
       headers: {
-        "Ocp-Apim-Subscription-Key": AZURE_VISION_KEY,
+        "Ocp-Apim-Subscription-Key": process.env.AZURE_VISION_KEY,
       },
     });
 
