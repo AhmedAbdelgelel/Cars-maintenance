@@ -1,4 +1,3 @@
-const jwt = require("jsonwebtoken");
 const Admin = require("../models/adminModel");
 const ApiError = require("../utils/apiError");
 const generateToken = require("../utils/generateToken");

@@ -1,4 +1,3 @@
-const jwt = require("jsonwebtoken");
 const Driver = require("../models/driverModel");
 const generateToken = require("../utils/generateToken");
 const createSendToken = (user) => {
@@ -106,48 +105,5 @@ exports.login = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
-  }
-};
-exports.getMe = async (req, res) => {
-  try {
-    if (req.admin) {
-      return res.status(200).json({
-        status: "success",
-        data: { admin: req.admin },
-      });
-    }
-    const driver = await Driver.findById(req.driver._id).populate({
-      path: "car",
-      select: "brand model plateNumber year color status",
-    });
-    const Maintenance = require("../models/maintenanceModel");
-    const maintenanceHistory = await Maintenance.find({
-      driver: req.driver._id,
-    })
-      .populate({
-        path: "car",
-        select: "brand model plateNumber year color status",
-      })
-      .populate({
-        path: "subCategories",
-        select: "name description",
-        populate: {
-          path: "category",
-          select: "name",
-        },
-      })
-      .sort("-date");
-    res.status(200).json({
-      status: "success",
-      data: {
-        driver,
-        maintenanceHistory,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: "error",
-      message: error.message,
-    });
   }
 };

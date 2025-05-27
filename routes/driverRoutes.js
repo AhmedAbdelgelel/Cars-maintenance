@@ -7,8 +7,11 @@ const {
   deleteDriver,
   getDriverByPhoneNumber,
   getDriverMaintenanceRecords,
+  getDriverMe,
 } = require("../services/driverService");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
+
+router.get("/me", protect, restrictTo("driver"), getDriverMe);
 
 router.route("/").get(protect, restrictTo("admin"), getAllDrivers);
 

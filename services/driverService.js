@@ -203,3 +203,49 @@ exports.getDriverMaintenanceRecords = async (req, res, next) => {
     data: records,
   });
 };
+
+exports.getDriverMe = async (req, res, next) => {
+  try {
+    if (!req.driver) {
+      return next(
+        new ApiError("Access denied. This endpoint is only for drivers.", 403)
+      );
+    }
+
+    const driver = await Driver.findById(req.driver._id).populate({
+      path: "car",
+      select: "brand model plateNumber year color status",
+    });
+
+    if (!driver) {
+      return next(new ApiError("Driver not found", 404));
+    }
+
+    const maintenanceHistory = await Maintenance.find({
+      driver: req.driver._id,
+    })
+      .populate({
+        path: "car",
+        select: "brand model plateNumber year color status",
+      })
+      .populate({
+        path: "subCategories",
+        select: "name description",
+        populate: {
+          path: "category",
+          select: "name",
+        },
+      })
+      .sort("-date");
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        driver,
+        maintenanceHistory,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -350,6 +350,80 @@
                                         }
                                     }
                                 }
+                            } }
+                    }
+                }
+            }
+        },
+        "/drivers/me": {
+            "get": {
+                "summary": "Get current driver's profile and maintenance history",
+                "tags": [ "Drivers" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Requires authentication as driver only. Returns the profile of the currently authenticated driver with their maintenance history.",
+                "responses": {
+                    "200": {
+                        "description": "Driver profile retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "driver": {
+                                                    "$ref": "#/components/schemas/Driver"
+                                                },
+                                                "maintenanceHistory": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/Maintenance"
+                                                    },
+                                                    "description": "Maintenance history for the driver"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Not logged in or invalid token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Driver access required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Driver not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
                             }
                         }
                     }
@@ -1633,65 +1707,7 @@
                                 }
                             }
                         }
-                    }
-                }
-            }
-        },
-        "/auth/me": {
-            "get": {
-                "summary": "Get current authenticated user profile with maintenance history",
-                "tags": [ "Authentication" ],
-                "security": [
-                    { "bearerAuth": [ ] }
-                ],
-                "description": "Retrieves the profile of the currently authenticated user (driver or admin) with maintenance history for drivers",
-                "responses": {
-                    "200": {
-                        "description": "User profile retrieved successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "driver": {
-                                                    "$ref": "#/components/schemas/Driver"
-                                                },
-                                                "maintenanceHistory": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "$ref": "#/components/schemas/Maintenance"
-                                                    },
-                                                    "description": "Maintenance history for the driver"
-                                                },
-                                                "admin": {
-                                                    "$ref": "#/components/schemas/Admin",
-                                                    "description": "Admin profile (returned only for admin users)"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized - Not logged in or invalid token",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Error"
-                                }
-                            }
-                        }
-                    }
-                }
+                    } }
             }
         },
         "/admin/register": {
