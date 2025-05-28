@@ -258,3 +258,43 @@ exports.getDriverMe = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.searchDrivers = async (req, res, next) => {
+  const { name, phoneNumber, licenseNumber, nationalId } = req.query;
+  
+  if (!name && !phoneNumber && !licenseNumber && !nationalId) {
+    return next(
+      new ApiError('Please provide at least one search parameter (name, phoneNumber, licenseNumber, or nationalId)', 400)
+    );
+  }
+  
+  const searchQuery = {};
+  
+  if (name) {
+    searchQuery.name = { $regex: name, $options: 'i' };
+  }
+  
+  if (phoneNumber) {
+    searchQuery.phoneNumber = { $regex: phoneNumber, $options: 'i' };
+  }
+  
+  if (licenseNumber) {
+    searchQuery.licenseNumber = { $regex: licenseNumber, $options: 'i' };
+  }
+  
+  if (nationalId) {
+    searchQuery.nationalId = { $regex: nationalId, $options: 'i' };
+  }
+  
+  const drivers = await Driver.find(searchQuery)
+    .populate({
+      path: "car",
+      select: "brand model plateNumber year color status meterReading lastMeterUpdate",
+    });
+  
+  res.status(200).json({
+    status: "success",
+    results: drivers.length,
+    data: drivers,
+  });
+};

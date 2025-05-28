@@ -130,6 +130,54 @@ exports.updateCar = async (req, res, next) => {
   });
 };
 
+exports.searchCars = async (req, res, next) => {
+  const { plateNumber, brand } = req.query;
+  
+  if (!plateNumber && !brand) {
+    return next(
+      new ApiError('Please provide at least one search parameter (plateNumber or brand)', 400)
+    );
+  }
+  
+  const searchQuery = {};
+  
+  if (plateNumber) {
+    searchQuery.plateNumber = { $regex: plateNumber, $options: 'i' };
+  }
+  
+  if (brand) {
+    searchQuery.brand = { $regex: brand, $options: 'i' };
+  }
+  
+  const cars = await Car.find(searchQuery)
+    .populate({
+      path: "driver",
+      select: "name phoneNumber nationalId licenseNumber address",
+    })
+    .populate({
+      path: "maintenanceHistory",
+      populate: [
+        {
+          path: "subCategories",
+          populate: {
+            path: "category",
+            select: "name",
+          },
+        },
+        {
+          path: "driver",
+          select: "name phoneNumber nationalId licenseNumber",
+        },
+      ],
+    });
+  
+  res.status(200).json({
+    status: "success",
+    results: cars.length,
+    data: cars,
+  });
+};
+
 exports.deleteCar = async (req, res, next) => {
   const car = await Car.findById(req.params.id);
 

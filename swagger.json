@@ -317,6 +317,75 @@
                 }
             }
         },
+        "/cars/search": {
+            "get": {
+                "summary": "Search cars by plate number and brand",
+                "tags": [ "Cars" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "plateNumber",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": false,
+                        "description": "Car plate number (partial or full)"
+                    },
+                    {
+                        "in": "query",
+                        "name": "brand",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": false,
+                        "description": "Car brand (partial or full)"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of cars matching search criteria",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "results": {
+                                            "type": "number",
+                                            "example": 2
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Car"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - missing search parameters",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/drivers": {
             "get": {
                 "summary": "Get all drivers",
@@ -702,6 +771,93 @@
                     },
                     "404": {
                         "description": "Driver not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/drivers/search": {
+            "get": {
+                "summary": "Search drivers by name, phone number, license, or national ID",
+                "tags": [ "Drivers" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "name",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": false,
+                        "description": "Driver name (partial or full)"
+                    },
+                    {
+                        "in": "query",
+                        "name": "phoneNumber",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": false,
+                        "description": "Driver phone number (partial or full)"
+                    },
+                    {
+                        "in": "query",
+                        "name": "licenseNumber",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": false,
+                        "description": "Driver license number (partial or full)"
+                    },
+                    {
+                        "in": "query",
+                        "name": "nationalId",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": false,
+                        "description": "Driver national ID (partial or full)"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of drivers matching search criteria",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "results": {
+                                            "type": "number",
+                                            "example": 2
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Driver"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - missing search parameters",
                         "content": {
                             "application/json": {
                                 "schema": {
