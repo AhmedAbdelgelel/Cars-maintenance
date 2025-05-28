@@ -31,23 +31,18 @@ exports.analyzeMeterImage = async (req, res, next) => {
 
     const meterReading = extractMeterReading(result);
 
-    // Determine what reading to save - either explicitly selected or auto-detected
     let readingToSave;
 
     if (req.body.selectedReading) {
-      // If user explicitly selects a reading, use that
       readingToSave = Number(req.body.selectedReading);
     } else if (
       meterReading.possibleReadings &&
       meterReading.possibleReadings.length > 0
     ) {
-      // Auto-select the first (usually largest) number if no selection was made
-      // Sort readings by numeric value to find the largest one (likely the odometer)
       const sortedReadings = [...meterReading.possibleReadings].sort(
         (a, b) => Number(b.value) - Number(a.value)
       );
 
-      // Get the first (largest) reading that's likely to be an odometer
       const likelyOdometer = sortedReadings.find((r) => Number(r.value) > 1000);
 
       if (likelyOdometer) {
@@ -55,7 +50,6 @@ exports.analyzeMeterImage = async (req, res, next) => {
       }
     }
 
-    // Only save if we have a valid reading to save
     if (readingToSave) {
       const currentDate = new Date();
 
@@ -63,7 +57,6 @@ exports.analyzeMeterImage = async (req, res, next) => {
       car.lastMeterUpdate = currentDate;
       await car.save();
 
-      // Update driver meter reading (only carMeter)
       driver.carMeter = {
         reading: readingToSave,
         updateDate: currentDate,
@@ -108,12 +101,10 @@ exports.updateDriverMeterReading = async (req, res, next) => {
       return next(new ApiError("The assigned car could not be found", 404));
     }
 
-    // Update car meter reading
     car.meterReading = meterReading;
     car.lastMeterUpdate = currentDate;
     await car.save();
 
-    // Update driver meter reading (only carMeter)
     driver.carMeter = {
       reading: meterReading,
       updateDate: currentDate,

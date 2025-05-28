@@ -2,17 +2,26 @@ const Driver = require("../models/driverModel");
 const ApiError = require("../utils/apiError");
 const generateToken = require("../utils/generateToken");
 
+const populateOptions = {
+  car: {
+    path: "car",
+    select:
+      "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt drivers",
+  },
+};
+
+const cleanDriverData = (driver) => {
+  const driverObj = driver.toObject();
+  delete driverObj.__v;
+  delete driverObj.maintenanceHistory;
+  if (driverObj.car) {
+    delete driverObj.car.__v;
+  }
+  return driverObj;
+};
+
 const createSendToken = (user) => {
-  user.password = undefined;
-  const role = user.role || "driver";
-  const token = generateToken(user._id, role);
-  return {
-    token,
-    user: {
-      ...user.toObject(),
-      role,
-    },
-  };
+  return generateToken(user._id, user.role || "driver");
 };
 
 exports.register = async (req, res, next) => {
@@ -40,45 +49,19 @@ exports.register = async (req, res, next) => {
       car,
     } = req.body;
 
-    const driverWithPhone = await Driver.findOne({ phoneNumber });
-    if (driverWithPhone) {
+    const exists = await Driver.exists({
+      $or: [{ phoneNumber }, { nationalId }, { licenseNumber }],
+    });
+    if (exists) {
       return next(
         new ApiError(
-          `Driver with this phone number already exists: ${phoneNumber}`,
+          "Driver with this phone, national ID, or license already exists",
           400
         )
       );
     }
-    if (nationalId) {
-      const driverWithNationalId = await Driver.findOne({
-        nationalId,
-      });
-      if (driverWithNationalId) {
-        return next(
-          new ApiError(
-            `Driver with this national ID already exists: ${nationalId}`,
-            400
-          )
-        );
-      }
-    }
-    if (licenseNumber) {
-      const driverWithLicense = await Driver.findOne({
-        licenseNumber,
-      });
-      if (driverWithLicense) {
-        return next(
-          new ApiError(
-            `Driver with this license number already exists: ${licenseNumber}`,
-            400
-          )
-        );
-      }
-    }
 
-    if (isMobileRequest) {
-      req.body.role = "driver";
-    }
+    if (isMobileRequest) req.body.role = "driver";
 
     const newDriver = await Driver.create({
       name,
@@ -88,22 +71,21 @@ exports.register = async (req, res, next) => {
       licenseNumber,
       address,
       car,
-      role: req.body.role || "driver",
     });
 
     if (car) {
       const Car = require("../models/carsModel");
-      await Car.findByIdAndUpdate(car, { driver: newDriver._id });
+      await Car.findByIdAndUpdate(car, { $push: { drivers: newDriver._id } });
+      if (!newDriver.car || newDriver.car.toString() !== car.toString()) {
+        await Driver.findByIdAndUpdate(newDriver._id, { car });
+      }
     }
 
-    const { token, user } = createSendToken(newDriver);
+    const token = createSendToken(newDriver);
 
     res.status(201).json({
       status: "success",
       token,
-      data: {
-        driver: user,
-      },
     });
   } catch (error) {
     next(error);
@@ -112,32 +94,34 @@ exports.register = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    const { phoneNumber, password } = req.body;
-    if (!phoneNumber || !password) {
-      return next(
-        new ApiError("Please provide phone number and password", 400)
-      );
+    const { phoneNumber } = req.body;
+
+    if (!phoneNumber) {
+      return next(new ApiError("Please provide phone number", 400));
     }
 
-    const driver = await Driver.findOne({ phoneNumber })
-      .select("+password")
-      .populate({
-        path: "car",
-        select:
-          "brand model plateNumber year color status meterReading lastMeterUpdate",
-      });
+    const driver = await Driver.findOne({ phoneNumber }).populate(
+      populateOptions.car
+    );
 
-    if (!driver || !(await driver.correctPassword(password, driver.password))) {
-      return next(new ApiError("Incorrect phone number or password", 401));
+    if (!driver) {
+      return next(new ApiError("Incorrect phone number", 401));
     }
 
-    const { token, user } = createSendToken(driver);
+    const token = createSendToken(driver);
 
     res.status(200).json({
       status: "success",
       token,
+      driver: cleanDriverData(driver),
     });
   } catch (error) {
     next(error);
   }
+};
+
+exports.logout = async (req, res) => {
+  res
+    .status(200)
+    .json({ status: "success", message: "Logged out successfully" });
 };

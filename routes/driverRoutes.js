@@ -8,12 +8,15 @@ const {
   getDriverByPhoneNumber,
   getDriverMaintenanceRecords,
   getDriverMe,
+  searchDrivers,
 } = require("../services/driverService");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
 router.get("/me", protect, restrictTo("driver"), getDriverMe);
 
 router.route("/").get(protect, restrictTo("admin"), getAllDrivers);
+
+router.route("/search").get(protect, restrictTo("admin"), searchDrivers);
 
 router
   .route("/:id")

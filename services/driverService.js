@@ -3,26 +3,80 @@ const Car = require("../models/carsModel");
 const Maintenance = require("../models/maintenanceModel");
 const ApiError = require("../utils/apiError");
 
-exports.getAllDrivers = async (req, res) => {
-  const drivers = await Driver.find().populate({
+const dbOptions = {
+  car: {
     path: "car",
     select:
-      "brand model plateNumber year color status meterReading lastMeterUpdate",
-  });
+      "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt",
+  },
+  maintenance: {
+    path: "maintenanceHistory",
+    populate: [
+      {
+        path: "car",
+        select: "brand model plateNumber year color status",
+      },
+      {
+        path: "subCategories",
+        select: "name description",
+        populate: {
+          path: "category",
+          select: "name",
+        },
+      },
+    ],
+  },
+};
+
+const cleanDriver = (driver) => {
+  const obj = driver.toObject ? driver.toObject() : driver;
+  delete obj.__v;
+  delete obj.password;
+  delete obj.maintenanceHistory;
+  delete obj.carMeter;
+  delete obj.lastMeterReading;
+  delete obj.lastMeterUpdate;
+  return obj;
+};
+
+const validateUniqueFields = async (data, driverId = null) => {
+  const uniqueFields = [
+    { field: "phoneNumber", message: "phone number" },
+    { field: "nationalId", message: "national ID" },
+    { field: "licenseNumber", message: "license number" },
+    { field: "email", message: "email" },
+  ];
+
+  for (const { field, message } of uniqueFields) {
+    if (data[field]) {
+      const existing = await Driver.findOne({
+        [field]: data[field],
+        _id: { $ne: driverId },
+      });
+
+      if (existing) {
+        throw new ApiError(
+          `Driver with this ${message} already exists: ${data[field]}`,
+          400
+        );
+      }
+    }
+  }
+};
+
+exports.getAllDrivers = async (req, res) => {
+  const drivers = await Driver.find().populate(dbOptions.car);
+  const data = drivers.map(cleanDriver);
 
   res.status(200).json({
     status: "success",
-    results: drivers.length,
-    data: drivers,
+    results: data.length,
+    data,
   });
 };
 
 exports.getDriverById = async (req, res, next) => {
-  const driver = await Driver.findById(req.params.id).populate({
-    path: "car",
-    select:
-      "brand model plateNumber year color status meterReading lastMeterUpdate",
-  });
+  const driver = await Driver.findById(req.params.id).populate(dbOptions.car);
 
   if (!driver) {
     return next(
@@ -30,29 +84,16 @@ exports.getDriverById = async (req, res, next) => {
     );
   }
 
-  // Format the response to explicitly include carMeter
-  const responseData = {
+  res.status(200).json({
     status: "success",
-    data: {
-      ...driver.toObject(),
-      carMeterInfo: {
-        reading: driver.carMeter ? driver.carMeter.reading : 0,
-        updateDate: driver.carMeter ? driver.carMeter.updateDate : null,
-      },
-    },
-  };
-
-  res.status(200).json(responseData);
+    data: cleanDriver(driver),
+  });
 };
 
 exports.getDriverByPhoneNumber = async (req, res, next) => {
   const driver = await Driver.findOne({
     phoneNumber: req.params.phoneNumber,
-  }).populate({
-    path: "car",
-    select:
-      "brand model plateNumber year color status meterReading lastMeterUpdate",
-  });
+  }).populate(dbOptions.car);
 
   if (!driver) {
     return next(
@@ -65,109 +106,48 @@ exports.getDriverByPhoneNumber = async (req, res, next) => {
 
   res.status(200).json({
     status: "success",
-    data: driver,
+    data: cleanDriver(driver),
   });
 };
 
 exports.updateDriver = async (req, res, next) => {
-  if (req.body.phoneNumber) {
-    const existingDriver = await Driver.findOne({
-      phoneNumber: req.body.phoneNumber,
-      _id: { $ne: req.params.id },
-    });
-    if (existingDriver) {
-      return next(
-        new ApiError(
-          `Driver with this phone number already exists: ${req.body.phoneNumber}`,
-          400
-        )
-      );
-    }
-  }
+  try {
+    await validateUniqueFields(req.body, req.params.id);
 
-  if (req.body.nationalId) {
-    const driverWithNationalId = await Driver.findOne({
-      nationalId: req.body.nationalId,
-      _id: { $ne: req.params.id },
-    });
-    if (driverWithNationalId) {
-      return next(
-        new ApiError(
-          `Driver with this national ID already exists: ${req.body.nationalId}`,
-          400
-        )
-      );
-    }
-  }
-
-  if (req.body.licenseNumber) {
-    const driverWithLicense = await Driver.findOne({
-      licenseNumber: req.body.licenseNumber,
-      _id: { $ne: req.params.id },
-    });
-    if (driverWithLicense) {
-      return next(
-        new ApiError(
-          `Driver with this license number already exists: ${req.body.licenseNumber}`,
-          400
-        )
-      );
-    }
-  }
-
-  const currentDriver = await Driver.findById(req.params.id);
-  if (!currentDriver) {
-    return next(
-      new ApiError(`No driver found with this id: ${req.params.id}`, 404)
-    );
-  }
-
-  if (
-    req.body.car &&
-    (!currentDriver.car || req.body.car !== currentDriver.car.toString())
-  ) {
-    const newCar = await Car.findById(req.body.car);
-    if (!newCar) {
-      return next(new ApiError(`No car found with id: ${req.body.car}`, 404));
-    }
-
-    if (newCar.driver && newCar.driver.toString() !== req.params.id) {
-      const existingDriverForCar = await Driver.findById(newCar.driver);
-      if (existingDriverForCar) {
-        return next(
-          new ApiError(
-            `Car is already assigned to driver: ${existingDriverForCar.name}`,
-            400
-          )
-        );
+    if (req.body.car === null) {
+      const currentDriver = await Driver.findById(req.params.id);
+      if (currentDriver?.car) {
+        await Car.findByIdAndUpdate(currentDriver.car, {
+          $unset: { driver: 1 },
+        });
       }
+    } else if (req.body.car) {
+      await Car.findByIdAndUpdate(req.body.car, { driver: req.params.id });
     }
 
-    if (currentDriver.car) {
-      await Car.findByIdAndUpdate(currentDriver.car, { $unset: { driver: 1 } });
+    const driver = await Driver.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    }).populate(dbOptions.car);
+
+    if (!driver) {
+      return next(
+        new ApiError(`No driver found with this id: ${req.params.id}`, 404)
+      );
     }
 
-    await Car.findByIdAndUpdate(req.body.car, { driver: req.params.id });
-  } else if (req.body.car === null && currentDriver.car) {
-    await Car.findByIdAndUpdate(currentDriver.car, { $unset: { driver: 1 } });
+    res.status(200).json({
+      status: "success",
+      message: "Driver updated successfully",
+      data: cleanDriver(driver),
+    });
+  } catch (error) {
+    next(error);
   }
-  const driver = await Driver.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-  }).populate({
-    path: "car",
-    select:
-      "brand model plateNumber year color status meterReading lastMeterUpdate",
-  });
-
-  res.status(200).json({
-    status: "success",
-    message: "Driver updated successfully",
-    data: driver,
-  });
 };
 
 exports.deleteDriver = async (req, res, next) => {
   const driver = await Driver.findById(req.params.id);
+
   if (!driver) {
     return next(
       new ApiError(`No driver found with this id: ${req.params.id}`, 404)
@@ -188,6 +168,7 @@ exports.deleteDriver = async (req, res, next) => {
 
 exports.getDriverMaintenanceRecords = async (req, res, next) => {
   const driver = await Driver.findById(req.params.id);
+
   if (!driver) {
     return next(
       new ApiError(`No driver found with this id: ${req.params.id}`, 404)
@@ -195,18 +176,7 @@ exports.getDriverMaintenanceRecords = async (req, res, next) => {
   }
 
   const records = await Maintenance.find({ driver: req.params.id })
-    .populate({
-      path: "car",
-      select: "brand model plateNumber year color status",
-    })
-    .populate({
-      path: "subCategories",
-      select: "name description",
-      populate: {
-        path: "category",
-        select: "name",
-      },
-    })
+    .populate(dbOptions.maintenance.populate)
     .sort({ date: -1 });
 
   res.status(200).json({
@@ -223,61 +193,64 @@ exports.getDriverMe = async (req, res, next) => {
         new ApiError("Access denied. This endpoint is only for drivers.", 403)
       );
     }
-    // Populate car with all fields
-    const driver = await Driver.findById(req.driver._id).populate({
-      path: "car",
-      select:
-        "_id plateNumber brand model year color status meterReading lastMeterUpdate createdAt updatedAt",
-    });
 
-    // Fetch maintenance history
+    const driver = await Driver.findById(req.driver._id)
+      .select("-__v -password")
+      .populate(dbOptions.car);
+
     const maintenanceHistory = await Maintenance.find({
       driver: req.driver._id,
     })
-      .populate({
-        path: "car",
-        select:
-          "_id plateNumber brand model year color status meterReading lastMeterUpdate createdAt updatedAt",
-      })
-      .populate({
-        path: "subCategories",
-        select: "_id name category cost createdAt updatedAt",
-      })
-      .sort("-date");
+      .populate(dbOptions.maintenance.populate)
+      .sort({ date: -1 });
 
-    // Format maintenanceHistory to match the desired response (flatten subCategories if needed)
-    const formattedHistory = maintenanceHistory.map((record) => {
-      // Flatten subCategories: keep both ObjectId and populated object if present
-      const subCategories = record.subCategories.map((sub) => {
-        if (typeof sub === "object" && sub !== null && sub._id) return sub;
-        return sub;
-      });
-      return {
-        _id: record._id,
-        car: record.car?._id || record.car,
-        driver: record.driver?._id || record.driver,
-        subCategories,
-        description: record.description,
-        cost: record.cost,
-        mechanicCost: record.mechanicCost,
-        date: record.date,
-      };
-    });
-
-    // Remove redundant meter fields from driver object
     const driverObj = driver.toObject();
+    delete driverObj.carMeter;
     delete driverObj.lastMeterReading;
     delete driverObj.lastMeterUpdate;
-    delete driverObj.carMeter;
+    delete driverObj.maintenanceHistory;
+    driverObj.maintenanceHistory = maintenanceHistory.map((m) => {
+      const mObj = m.toObject();
+      delete mObj.__v;
+      return mObj;
+    });
 
     res.status(200).json({
       status: "success",
-      data: {
-        driver: driverObj,
-        maintenanceHistory: formattedHistory,
-      },
+      data: driverObj,
     });
   } catch (error) {
     next(error);
   }
+};
+
+exports.searchDrivers = async (req, res, next) => {
+  const { name, phoneNumber, licenseNumber, nationalId } = req.query;
+
+  if (!name && !phoneNumber && !licenseNumber && !nationalId) {
+    return next(
+      new ApiError(
+        "Please provide at least one search parameter (name, phoneNumber, licenseNumber, or nationalId)",
+        400
+      )
+    );
+  }
+
+  const searchQuery = {};
+
+  if (name) searchQuery.name = { $regex: name, $options: "i" };
+  if (phoneNumber)
+    searchQuery.phoneNumber = { $regex: phoneNumber, $options: "i" };
+  if (licenseNumber)
+    searchQuery.licenseNumber = { $regex: licenseNumber, $options: "i" };
+  if (nationalId)
+    searchQuery.nationalId = { $regex: nationalId, $options: "i" };
+
+  const drivers = await Driver.find(searchQuery).populate(dbOptions.car);
+
+  res.status(200).json({
+    status: "success",
+    results: drivers.length,
+    data: drivers,
+  });
 };

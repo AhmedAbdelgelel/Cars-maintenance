@@ -1617,15 +1617,10 @@
                                         },
                                         "token": {
                                             "type": "string",
-                                            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                            "example": "jwt.token.here"
                                         },
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "driver": {
-                                                    "$ref": "#/components/schemas/Driver"
-                                                }
-                                            }
+                                        "driver": {
+                                            "$ref": "#/components/schemas/Driver"
                                         }
                                     }
                                 }
@@ -1658,7 +1653,8 @@
                             }
                         }
                     }
-                }, "responses": {
+                },
+                "responses": {
                     "200": {
                         "description": "Driver logged in successfully",
                         "content": {
@@ -1672,40 +1668,10 @@
                                         },
                                         "token": {
                                             "type": "string",
-                                            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                            "example": "jwt.token.here"
                                         },
-                                        "meterData": {
-                                            "type": "object",
-                                            "properties": {
-                                                "lastMeterReading": {
-                                                    "type": "number",
-                                                    "example": 25000,
-                                                    "description": "Latest meter reading from driver"
-                                                },
-                                                "lastMeterUpdate": {
-                                                    "type": "string",
-                                                    "format": "date-time",
-                                                    "description": "Date of latest driver meter reading"
-                                                },
-                                                "carMeterReading": {
-                                                    "type": "number",
-                                                    "example": 25000,
-                                                    "description": "Latest meter reading from car"
-                                                },
-                                                "carLastMeterUpdate": {
-                                                    "type": "string",
-                                                    "format": "date-time",
-                                                    "description": "Date of latest car meter reading"
-                                                }
-                                            }
-                                        },
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "driver": {
-                                                    "$ref": "#/components/schemas/Driver"
-                                                }
-                                            }
+                                        "driver": {
+                                            "$ref": "#/components/schemas/Driver"
                                         }
                                     }
                                 }
@@ -1733,10 +1699,10 @@
                         }
                     } }
             }
-        }, "/admin/register": {
+        },
+        "/admin/register": {
             "post": {
                 "summary": "Register a new admin",
-                "description": "Register a new admin user. This endpoint is restricted and cannot be accessed from mobile devices.",
                 "tags": [ "Admin" ],
                 "requestBody": {
                     "required": true,
@@ -1779,16 +1745,6 @@
                     },
                     "400": {
                         "description": "Bad request - validation error or admin already exists",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Error"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - cannot register admin from mobile devices",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2361,51 +2317,25 @@
             "Car": {
                 "type": "object",
                 "properties": {
-                    "_id": {
-                        "type": "string",
-                        "example": "60d21b4667d0d8992e610c85"
+                    "_id": { "type": "string", "example": "60d21b4667d0d8992e610c85" },
+                    "plateNumber": { "type": "string", "example": "ABC1234" },
+                    "brand": { "type": "string", "example": "Toyota" },
+                    "model": { "type": "string", "example": "Camry" },
+                    "year": { "type": "number", "example": 2020 },
+                    "color": { "type": "string", "example": "Silver" },
+                    "driver": {
+                        "type": "array",
+                        "items": { "$ref": "#/components/schemas/Driver" }
                     },
-                    "plateNumber": {
-                        "type": "string",
-                        "example": "ABC1234"
+                    "status": { "type": "string", "enum": [ "available", "in_use", "maintenance" ], "example": "available" },
+                    "meterReading": { "type": "number", "example": 195359 },
+                    "lastMeterUpdate": { "type": "string", "format": "date-time" },
+                    "maintenanceHistory": {
+                        "type": "array",
+                        "items": { "$ref": "#/components/schemas/Maintenance" }
                     },
-                    "brand": {
-                        "type": "string",
-                        "example": "Toyota"
-                    },
-                    "model": {
-                        "type": "string",
-                        "example": "Camry"
-                    },
-                    "year": {
-                        "type": "number",
-                        "example": 2020
-                    },
-                    "color": {
-                        "type": "string",
-                        "example": "Silver"
-                    },
-                    "status": {
-                        "type": "string",
-                        "enum": [ "available", "in_use", "maintenance" ],
-                        "example": "available"
-                    },
-                    "meterReading": {
-                        "type": "number",
-                        "example": 123456
-                    },
-                    "lastMeterUpdate": {
-                        "type": "string",
-                        "format": "date-time"
-                    },
-                    "createdAt": {
-                        "type": "string",
-                        "format": "date-time"
-                    },
-                    "updatedAt": {
-                        "type": "string",
-                        "format": "date-time"
-                    }
+                    "createdAt": { "type": "string", "format": "date-time" },
+                    "updatedAt": { "type": "string", "format": "date-time" }
                 }
             },
             "CarDetailed": {
@@ -2497,139 +2427,42 @@
             "Driver": {
                 "type": "object",
                 "properties": {
-                    "_id": {
-                        "type": "string",
-                        "example": "60d21b4667d0d8992e610c86"
-                    },
-                    "name": {
-                        "type": "string",
-                        "example": "John Smith"
-                    },
-                    "email": {
-                        "type": "string",
-                        "example": "john.smith@example.com"
-                    },
-                    "phoneNumber": {
-                        "type": "string",
-                        "example": "123-456-7890"
-                    },
-                    "nationalId": {
-                        "type": "string",
-                        "example": "ABC123456"
-                    },
-                    "licenseNumber": {
-                        "type": "string",
-                        "example": "DL98765"
-                    },
-                    "address": {
-                        "type": "string",
-                        "example": "123 Main St, Anytown"
-                    },
-                    "car": {
-                        "$ref": "#/components/schemas/Car"
-                    },
-                    "role": {
-                        "type": "string",
-                        "enum": [ "driver", "admin" ],
-                        "example": "driver"
-                    }
+                    "_id": { "type": "string", "example": "60d21b4667d0d8992e610c86" },
+                    "name": { "type": "string", "example": "Ahmed Mohammed" },
+                    "phoneNumber": { "type": "string", "example": "111-222-4444" },
+                    "nationalId": { "type": "string", "example": "AND123456" },
+                    "licenseNumber": { "type": "string", "example": "CD98765" },
+                    "car": { "type": "string", "example": "60d21b4667d0d8992e610c85" },
+                    "role": { "type": "string", "enum": [ "driver", "admin" ], "example": "driver" }
                 }
             },
             "DriverInput": {
                 "type": "object",
                 "properties": {
-                    "name": {
-                        "type": "string",
-                        "example": "John Smith"
-                    },
-                    "email": {
-                        "type": "string",
-                        "example": "john.smith@example.com"
-                    },
-                    "phoneNumber": {
-                        "type": "string",
-                        "example": "123-456-7890"
-                    },
-                    "nationalId": {
-                        "type": "string",
-                        "example": "ABC123456"
-                    },
-                    "licenseNumber": {
-                        "type": "string",
-                        "example": "DL98765"
-                    },
-                    "address": {
-                        "type": "string",
-                        "example": "123 Main St, Anytown"
-                    },
-                    "car": {
-                        "type": "string",
-                        "example": "60d21b4667d0d8992e610c85"
-                    }
+                    "name": { "type": "string", "example": "John Smith" },
+                    "password": { "type": "string", "example": "password123" },
+                    "phoneNumber": { "type": "string", "example": "123-456-7890" },
+                    "nationalId": { "type": "string", "example": "ABC123456" },
+                    "licenseNumber": { "type": "string", "example": "DL98765" },
+                    "address": { "type": "string", "example": "123 Main St, Anytown" },
+                    "car": { "type": "string", "example": "60d21b4667d0d8992e610c85" }
                 },
-                "required": [ "name", "email", "phoneNumber", "nationalId", "licenseNumber", "address" ]
+                "required": [ "name", "password", "phoneNumber", "nationalId", "licenseNumber", "address" ]
             },
             "Maintenance": {
                 "type": "object",
                 "properties": {
-                    "_id": {
-                        "type": "string",
-                        "example": "60d21b4667d0d8992e610c87"
-                    },
-                    "car": {
-                        "oneOf": [
-                            {
-                                "type": "string",
-                                "example": "60d21b4667d0d8992e610c85"
-                            },
-                            {
-                                "$ref": "#/components/schemas/Car"
-                            }
-                        ]
-                    },
-                    "driver": {
-                        "oneOf": [
-                            {
-                                "type": "string",
-                                "example": "60d21b4667d0d8992e610c86"
-                            },
-                            {
-                                "$ref": "#/components/schemas/Driver"
-                            }
-                        ]
-                    },
+                    "_id": { "type": "string", "example": "60d21b4667d0d8992e610c87" },
+                    "car": { "$ref": "#/components/schemas/Car" },
+                    "driver": { "$ref": "#/components/schemas/Driver" },
                     "subCategories": {
                         "type": "array",
-                        "items": {
-                            "oneOf": [
-                                {
-                                    "type": "string",
-                                    "example": "60d21b4667d0d8992e610c88"
-                                },
-                                {
-                                    "$ref": "#/components/schemas/SubCategory"
-                                }
-                            ]
-                        }
+                        "items": { "$ref": "#/components/schemas/SubCategory" }
                     },
-                    "description": {
-                        "type": "string",
-                        "example": "Regular maintenance - oil change and air filter replacement"
-                    },
-                    "cost": {
-                        "type": "number",
-                        "example": 120,
-                        "description": "Total cost for the maintenance operation"
-                    },
-                    "mechanicCost": {
-                        "type": "number",
-                        "example": 80,
-                        "description": "Labor cost for the mechanic"
-                    },
-                    "date": {
-                        "type": "string",
-                        "format": "date-time"
-                    }
+                    "description": { "type": "string", "example": "Replace engine air filter" },
+                    "cost": { "type": "number", "example": 120 },
+                    "mechanicCost": { "type": "number", "example": 80 },
+                    "date": { "type": "string", "format": "date-time" }
                 }
             },
             "MaintenanceInput": {
@@ -2898,6 +2731,10 @@
                         "type": "string",
                         "example": "admin@example.com"
                     },
+                    "password": {
+                        "type": "string",
+                        "example": "hashedpassword"
+                    },
                     "phoneNumber": {
                         "type": "string",
                         "example": "123-456-7890"
@@ -2918,7 +2755,8 @@
                     }
                 }
             },
-            "AdminRegisterInput": { "type": "object",
+            "AdminRegisterInput": {
+                "type": "object",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -2933,8 +2771,13 @@
                         "format": "password",
                         "example": "password123",
                         "minLength": 8
-                    } },
-                "required": [ "name", "email", "password" ]
+                    },
+                    "phoneNumber": {
+                        "type": "string",
+                        "example": "123-456-7890"
+                    }
+                },
+                "required": [ "name", "email", "password", "phoneNumber" ]
             },
             "AdminLoginInput": {
                 "type": "object",

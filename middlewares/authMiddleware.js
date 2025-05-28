@@ -20,7 +20,7 @@ exports.protect = async (req, res, next) => {
     let currentUser = await Driver.findById(decoded.id).populate({
       path: "car",
       select:
-        "brand model plateNumber year color status meterReading lastMeterUpdate",
+        "brand model plateNumber year color status meterReading lastMeterUpdate drivers",
     });
     if (!currentUser) {
       currentUser = await Admin.findById(decoded.id);
