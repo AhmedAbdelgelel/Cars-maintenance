@@ -4,7 +4,27 @@ const Maintenance = require("../models/maintenanceModel");
 const ApiError = require("../utils/apiError");
 
 exports.getAllCars = async (req, res) => {
-  const cars = await Car.find()
+  const searchQuery = {};
+  
+  const { plateNumber, brand, model, status } = req.query;
+  
+  if (plateNumber) {
+    searchQuery.plateNumber = { $regex: plateNumber, $options: 'i' };
+  }
+  
+  if (brand) {
+    searchQuery.brand = { $regex: brand, $options: 'i' };
+  }
+
+  if (model) {
+    searchQuery.model = { $regex: model, $options: 'i' };
+  }
+
+  if (status) {
+    searchQuery.status = status;
+  }
+  
+  const cars = await Car.find(searchQuery)
     .populate({
       path: "driver",
       select: "name phoneNumber nationalId licenseNumber address",
@@ -127,54 +147,6 @@ exports.updateCar = async (req, res, next) => {
     status: "success",
     message: "Car updated successfully",
     data: car,
-  });
-};
-
-exports.searchCars = async (req, res, next) => {
-  const { plateNumber, brand } = req.query;
-  
-  if (!plateNumber && !brand) {
-    return next(
-      new ApiError('Please provide at least one search parameter (plateNumber or brand)', 400)
-    );
-  }
-  
-  const searchQuery = {};
-  
-  if (plateNumber) {
-    searchQuery.plateNumber = { $regex: plateNumber, $options: 'i' };
-  }
-  
-  if (brand) {
-    searchQuery.brand = { $regex: brand, $options: 'i' };
-  }
-  
-  const cars = await Car.find(searchQuery)
-    .populate({
-      path: "driver",
-      select: "name phoneNumber nationalId licenseNumber address",
-    })
-    .populate({
-      path: "maintenanceHistory",
-      populate: [
-        {
-          path: "subCategories",
-          populate: {
-            path: "category",
-            select: "name",
-          },
-        },
-        {
-          path: "driver",
-          select: "name phoneNumber nationalId licenseNumber",
-        },
-      ],
-    });
-  
-  res.status(200).json({
-    status: "success",
-    results: cars.length,
-    data: cars,
   });
 };
 

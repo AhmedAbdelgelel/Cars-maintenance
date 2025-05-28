@@ -56,13 +56,39 @@
   "paths": {
     "/cars": {
       "get": {
-        "summary": "Get all cars",
-        "tags": [
-          "Cars"
-        ],
+        "summary": "Get all cars (with optional search parameters)",
+        "tags": ["Cars"],
         "security": [
+          { "bearerAuth": [] }
+        ],
+        "parameters": [
           {
-            "bearerAuth": []
+            "in": "query",
+            "name": "plateNumber",
+            "schema": { "type": "string" },
+            "required": false,
+            "description": "Filter by plate number (partial or full)"
+          },
+          {
+            "in": "query",
+            "name": "brand",
+            "schema": { "type": "string" },
+            "required": false,
+            "description": "Filter by brand (partial or full)"
+          },
+          {
+            "in": "query",
+            "name": "model",
+            "schema": { "type": "string" },
+            "required": false,
+            "description": "Filter by model (partial or full)"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": { "type": "string", "enum": ["available", "in_use", "maintenance"] },
+            "required": false,
+            "description": "Filter by status"
           }
         ],
         "responses": {
@@ -73,19 +99,11 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "success"
-                    },
-                    "results": {
-                      "type": "number",
-                      "example": 4
-                    },
+                    "status": { "type": "string", "example": "success" },
+                    "results": { "type": "number", "example": 4 },
                     "data": {
                       "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Car"
-                      }
+                      "items": { "$ref": "#/components/schemas/Car" }
                     }
                   }
                 }
@@ -327,77 +345,7 @@
         }
       }
     },
-    "/cars/search": {
-      "get": {
-        "summary": "Search cars by plate number and brand",
-        "tags": [
-          "Cars"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "plateNumber",
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "description": "Car plate number (partial or full)"
-          },
-          {
-            "in": "query",
-            "name": "brand",
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "description": "Car brand (partial or full)"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of cars matching search criteria",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "success"
-                    },
-                    "results": {
-                      "type": "number",
-                      "example": 2
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Car"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request - missing search parameters",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
+
     "/drivers": {
       "get": {
         "summary": "Get all drivers",

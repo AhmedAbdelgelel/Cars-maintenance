@@ -6,7 +6,6 @@ const {
   createCar,
   updateCar,
   deleteCar,
-  searchCars,
 } = require("../services/carsService");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
@@ -14,8 +13,6 @@ router
   .route("/")
   .get(protect, restrictTo("admin"), getAllCars)
   .post(protect, restrictTo("admin"), createCar);
-
-router.route("/search").get(protect, restrictTo("admin"), searchCars);
 
 router
   .route("/:id")
