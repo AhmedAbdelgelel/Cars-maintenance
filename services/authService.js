@@ -1,4 +1,5 @@
 const Driver = require("../models/driverModel");
+const ApiError = require("../utils/apiError");
 const generateToken = require("../utils/generateToken");
 const createSendToken = (user) => {
   user.password = undefined;
@@ -126,4 +127,11 @@ exports.login = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+exports.logout = async (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "Logged out successfully",
+  });
 };
