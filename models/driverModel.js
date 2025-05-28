@@ -35,13 +35,6 @@ const driverSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Car",
   },
-  lastMeterReading: {
-    type: Number,
-    default: 0,
-  },
-  lastMeterUpdate: {
-    type: Date,
-  },
   carMeter: {
     reading: {
       type: Number,

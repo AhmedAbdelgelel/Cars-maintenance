@@ -1658,8 +1658,7 @@
                             }
                         }
                     }
-                },
-                "responses": {
+                }, "responses": {
                     "200": {
                         "description": "Driver logged in successfully",
                         "content": {
@@ -1674,6 +1673,31 @@
                                         "token": {
                                             "type": "string",
                                             "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                        },
+                                        "meterData": {
+                                            "type": "object",
+                                            "properties": {
+                                                "lastMeterReading": {
+                                                    "type": "number",
+                                                    "example": 25000,
+                                                    "description": "Latest meter reading from driver"
+                                                },
+                                                "lastMeterUpdate": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "description": "Date of latest driver meter reading"
+                                                },
+                                                "carMeterReading": {
+                                                    "type": "number",
+                                                    "example": 25000,
+                                                    "description": "Latest meter reading from car"
+                                                },
+                                                "carLastMeterUpdate": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "description": "Date of latest car meter reading"
+                                                }
+                                            }
                                         },
                                         "data": {
                                             "type": "object",
@@ -1709,10 +1733,10 @@
                         }
                     } }
             }
-        },
-        "/admin/register": {
+        }, "/admin/register": {
             "post": {
                 "summary": "Register a new admin",
+                "description": "Register a new admin user. This endpoint is restricted and cannot be accessed from mobile devices.",
                 "tags": [ "Admin" ],
                 "requestBody": {
                     "required": true,
@@ -1755,6 +1779,16 @@
                     },
                     "400": {
                         "description": "Bad request - validation error or admin already exists",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - cannot register admin from mobile devices",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2884,8 +2918,7 @@
                     }
                 }
             },
-            "AdminRegisterInput": {
-                "type": "object",
+            "AdminRegisterInput": { "type": "object",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -2900,13 +2933,8 @@
                         "format": "password",
                         "example": "password123",
                         "minLength": 8
-                    },
-                    "phoneNumber": {
-                        "type": "string",
-                        "example": "123-456-7890"
-                    }
-                },
-                "required": [ "name", "email", "password", "phoneNumber" ]
+                    } },
+                "required": [ "name", "email", "password" ]
             },
             "AdminLoginInput": {
                 "type": "object",

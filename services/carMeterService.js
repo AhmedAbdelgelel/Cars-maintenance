@@ -63,16 +63,11 @@ exports.analyzeMeterImage = async (req, res, next) => {
       car.lastMeterUpdate = currentDate;
       await car.save();
 
-      // Update driver meter reading
-      driver.lastMeterReading = readingToSave;
-      driver.lastMeterUpdate = currentDate;
-
-      // Update the carMeter field in driver document
+      // Update driver meter reading (only carMeter)
       driver.carMeter = {
         reading: readingToSave,
         updateDate: currentDate,
       };
-
       await driver.save();
     }
     res.status(200).json({
@@ -118,16 +113,11 @@ exports.updateDriverMeterReading = async (req, res, next) => {
     car.lastMeterUpdate = currentDate;
     await car.save();
 
-    // Update driver meter reading in one place
+    // Update driver meter reading (only carMeter)
     driver.carMeter = {
       reading: meterReading,
       updateDate: currentDate,
     };
-
-    // Keep these fields for backward compatibility
-    driver.lastMeterReading = meterReading;
-    driver.lastMeterUpdate = currentDate;
-
     await driver.save();
 
     res.status(200).json({

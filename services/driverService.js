@@ -223,10 +223,12 @@ exports.getDriverMe = async (req, res, next) => {
         new ApiError("Access denied. This endpoint is only for drivers.", 403)
       );
     }
-
-    // Use the driver from the request which already has all the data we need
-    // This is populated by the authMiddleware
-    const driver = req.driver;
+    // Populate car with all fields
+    const driver = await Driver.findById(req.driver._id).populate({
+      path: "car",
+      select:
+        "_id plateNumber brand model year color status meterReading lastMeterUpdate createdAt updatedAt",
+    });
 
     // Fetch maintenance history
     const maintenanceHistory = await Maintenance.find({
@@ -234,24 +236,45 @@ exports.getDriverMe = async (req, res, next) => {
     })
       .populate({
         path: "car",
-        select: "brand model plateNumber year color status",
+        select:
+          "_id plateNumber brand model year color status meterReading lastMeterUpdate createdAt updatedAt",
       })
       .populate({
         path: "subCategories",
-        select: "name description",
-        populate: {
-          path: "category",
-          select: "name",
-        },
+        select: "_id name category cost createdAt updatedAt",
       })
       .sort("-date");
 
-    // Simple response that includes both driver (with carMeter) and maintenance history
+    // Format maintenanceHistory to match the desired response (flatten subCategories if needed)
+    const formattedHistory = maintenanceHistory.map((record) => {
+      // Flatten subCategories: keep both ObjectId and populated object if present
+      const subCategories = record.subCategories.map((sub) => {
+        if (typeof sub === "object" && sub !== null && sub._id) return sub;
+        return sub;
+      });
+      return {
+        _id: record._id,
+        car: record.car?._id || record.car,
+        driver: record.driver?._id || record.driver,
+        subCategories,
+        description: record.description,
+        cost: record.cost,
+        mechanicCost: record.mechanicCost,
+        date: record.date,
+      };
+    });
+
+    // Remove redundant meter fields from driver object
+    const driverObj = driver.toObject();
+    delete driverObj.lastMeterReading;
+    delete driverObj.lastMeterUpdate;
+    delete driverObj.carMeter;
+
     res.status(200).json({
       status: "success",
       data: {
-        driver,
-        maintenanceHistory,
+        driver: driverObj,
+        maintenanceHistory: formattedHistory,
       },
     });
   } catch (error) {

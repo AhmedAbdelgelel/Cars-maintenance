@@ -1,5 +1,7 @@
 const Driver = require("../models/driverModel");
+const ApiError = require("../utils/apiError");
 const generateToken = require("../utils/generateToken");
+
 const createSendToken = (user) => {
   user.password = undefined;
   const role = user.role || "driver";
@@ -12,8 +14,22 @@ const createSendToken = (user) => {
     },
   };
 };
+
 exports.register = async (req, res, next) => {
   try {
+    const isMobileRequest =
+      req.headers["user-agent"]?.toLowerCase().includes("mobile") ||
+      req.headers["is-mobile-app"] === "true";
+
+    if (isMobileRequest && req.body.role === "admin") {
+      return next(
+        new ApiError(
+          "Admin registration is not allowed from mobile devices",
+          403
+        )
+      );
+    }
+
     const {
       name,
       password,
@@ -23,6 +39,7 @@ exports.register = async (req, res, next) => {
       address,
       car,
     } = req.body;
+
     const driverWithPhone = await Driver.findOne({ phoneNumber });
     if (driverWithPhone) {
       return next(
@@ -58,6 +75,11 @@ exports.register = async (req, res, next) => {
         );
       }
     }
+
+    if (isMobileRequest) {
+      req.body.role = "driver";
+    }
+
     const newDriver = await Driver.create({
       name,
       password,
@@ -66,12 +88,16 @@ exports.register = async (req, res, next) => {
       licenseNumber,
       address,
       car,
+      role: req.body.role || "driver",
     });
+
     if (car) {
       const Car = require("../models/carsModel");
       await Car.findByIdAndUpdate(car, { driver: newDriver._id });
     }
+
     const { token, user } = createSendToken(newDriver);
+
     res.status(201).json({
       status: "success",
       token,
@@ -83,6 +109,7 @@ exports.register = async (req, res, next) => {
     next(error);
   }
 };
+
 exports.login = async (req, res, next) => {
   try {
     const { phoneNumber, password } = req.body;
@@ -92,7 +119,6 @@ exports.login = async (req, res, next) => {
       );
     }
 
-    // Get driver with password and populate car information
     const driver = await Driver.findOne({ phoneNumber })
       .select("+password")
       .populate({
@@ -107,21 +133,9 @@ exports.login = async (req, res, next) => {
 
     const { token, user } = createSendToken(driver);
 
-    // Add meter reading data explicitly
-    const meterData = {
-      lastMeterReading: driver.lastMeterReading,
-      lastMeterUpdate: driver.lastMeterUpdate,
-      carMeterReading: driver.car ? driver.car.meterReading : null,
-      carLastMeterUpdate: driver.car ? driver.car.lastMeterUpdate : null,
-    };
-
     res.status(200).json({
       status: "success",
       token,
-      meterData,
-      data: {
-        driver: user,
-      },
     });
   } catch (error) {
     next(error);
