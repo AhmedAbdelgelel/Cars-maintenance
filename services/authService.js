@@ -2,10 +2,6 @@ const Driver = require("../models/driverModel");
 const ApiError = require("../utils/apiError");
 const generateToken = require("../utils/generateToken");
 
-const createSendToken = (user) => {
-  return generateToken(user._id, user.role || "driver");
-};
-
 exports.register = async (req, res, next) => {
   try {
     const isMobileRequest =
@@ -21,15 +17,8 @@ exports.register = async (req, res, next) => {
       );
     }
 
-    const {
-      name,
-      password,
-      phoneNumber,
-      nationalId,
-      licenseNumber,
-      address,
-      // car, // Removed car from destructuring
-    } = req.body;
+    const { name, password, phoneNumber, nationalId, licenseNumber, address } =
+      req.body;
 
     const exists = await Driver.exists({
       $or: [{ phoneNumber }, { nationalId }, { licenseNumber }],
@@ -54,7 +43,7 @@ exports.register = async (req, res, next) => {
       address,
     });
 
-    const token = createSendToken(newDriver);
+    const token = generateToken(newDriver._id, newDriver.role || "driver");
 
     res.status(201).json({
       status: "success",
@@ -87,7 +76,7 @@ exports.login = async (req, res, next) => {
       return next(new ApiError("Incorrect phone number", 401));
     }
 
-    const token = createSendToken(driver);
+    const token = generateToken(driver._id, driver.role || "driver");
 
     res.status(200).json({
       status: "success",

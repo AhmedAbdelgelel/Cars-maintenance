@@ -2,7 +2,12 @@ const Category = require("../models/categoryModel");
 const ApiError = require("../utils/apiError");
 
 exports.getAllCategories = async (req, res) => {
-  const categories = await Category.find().populate("subCategories");
+  const categories = await Category.find()
+    .populate({
+      path: "subCategories",
+      select: "-__v",
+    })
+    .select("-__v");
 
   res.status(200).json({
     status: "success",
@@ -12,9 +17,12 @@ exports.getAllCategories = async (req, res) => {
 };
 
 exports.getCategoryById = async (req, res, next) => {
-  const category = await Category.findById(req.params.id).populate(
-    "subCategories"
-  );
+  const category = await Category.findById(req.params.id)
+    .populate({
+      path: "subCategories",
+      select: "-__v",
+    })
+    .select("-__v");
 
   if (!category) {
     return next(
@@ -29,7 +37,9 @@ exports.getCategoryById = async (req, res, next) => {
 };
 
 exports.createCategory = async (req, res, next) => {
-  const existingCategory = await Category.findOne({ name: req.body.name });
+  const existingCategory = await Category.findOne({
+    name: req.body.name,
+  }).select("-__v");
   if (existingCategory) {
     return next(
       new ApiError(`Category with name "${req.body.name}" already exists`, 400)
@@ -48,7 +58,12 @@ exports.createCategory = async (req, res, next) => {
 exports.updateCategory = async (req, res, next) => {
   const category = await Category.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
-  }).populate("subCategories");
+  })
+    .populate({
+      path: "subCategories",
+      select: "-__v",
+    })
+    .select("-__v");
 
   if (!category) {
     return next(

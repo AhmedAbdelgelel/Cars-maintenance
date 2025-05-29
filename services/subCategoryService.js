@@ -3,7 +3,7 @@ const Category = require("../models/categoryModel");
 const ApiError = require("../utils/apiError");
 
 exports.getAllSubCategories = async (req, res) => {
-  const subCategories = await SubCategory.find();
+  const subCategories = await SubCategory.find().select("-__v");
   res.status(200).json({
     status: "success",
     results: subCategories.length,
@@ -12,7 +12,7 @@ exports.getAllSubCategories = async (req, res) => {
 };
 
 exports.getSubCategoryById = async (req, res, next) => {
-  const subCategory = await SubCategory.findById(req.params.id);
+  const subCategory = await SubCategory.findById(req.params.id).select("-__v");
 
   if (!subCategory) {
     return next(
@@ -36,7 +36,7 @@ exports.getSubCategoriesByCategoryId = async (req, res, next) => {
 
   const subCategories = await SubCategory.find({
     category: req.params.categoryId,
-  });
+  }).select("-__v");
 
   res.status(200).json({
     status: "success",
@@ -78,7 +78,7 @@ exports.createSubCategory = async (req, res, next) => {
   res.status(201).json({
     status: "success",
     message: "Subcategory created successfully",
-    data: subCategory,
+    data: await SubCategory.findById(subCategory._id).select("-__v"),
   });
 };
 
@@ -117,7 +117,7 @@ exports.updateSubCategory = async (req, res, next) => {
     req.params.id,
     req.body,
     { new: true, runValidators: true }
-  );
+  ).select("-__v");
 
   res.status(200).json({
     status: "success",
