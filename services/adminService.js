@@ -59,7 +59,6 @@ exports.login = async (req, res, next) => {
     }
 
     const isMatch = await bcrypt.compare(password, admin.password);
-
     if (!isMatch) {
       return next(new ApiError("Incorrect email or password", 401));
     }
@@ -70,12 +69,12 @@ exports.login = async (req, res, next) => {
 
     const token = generateToken(admin._id, admin.role || "admin");
 
-    admin.password = undefined;
+    const safeAdmin = await Admin.findById(admin._id).select("-password -__v");
 
     res.status(200).json({
       status: "success",
       token,
-      admin,
+      admin: safeAdmin,
     });
   } catch (error) {
     next(error);
