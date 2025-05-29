@@ -3,7 +3,9 @@ const Category = require("../models/categoryModel");
 const ApiError = require("../utils/apiError");
 
 exports.getAllSubCategories = async (req, res) => {
-  const subCategories = await SubCategory.find().select("-__v");
+  const subCategories = await SubCategory.find()
+    .select("-__v")
+    .populate("category", "name"); 
   res.status(200).json({
     status: "success",
     results: subCategories.length,
