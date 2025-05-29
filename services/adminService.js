@@ -51,7 +51,6 @@ exports.login = async (req, res, next) => {
     if (!email || !password) {
       return next(new ApiError("Please provide email and password", 400));
     }
-
     const admin = await Admin.findOne({ email }).select("-__v");
 
     if (!admin) {
