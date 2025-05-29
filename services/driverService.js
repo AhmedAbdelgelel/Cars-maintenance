@@ -3,42 +3,6 @@ const Car = require("../models/carsModel");
 const Maintenance = require("../models/maintenanceModel");
 const ApiError = require("../utils/apiError");
 
-const dbOptions = {
-  car: {
-    path: "car",
-    select:
-      "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt",
-  },
-  maintenance: {
-    path: "maintenanceHistory",
-    populate: [
-      {
-        path: "car",
-        select: "brand model plateNumber year color status",
-      },
-      {
-        path: "subCategories",
-        select: "name description",
-        populate: {
-          path: "category",
-          select: "name",
-        },
-      },
-    ],
-  },
-};
-
-const cleanDriver = (driver) => {
-  const obj = driver.toObject ? driver.toObject() : driver;
-  delete obj.__v;
-  delete obj.password;
-  delete obj.maintenanceHistory;
-  delete obj.carMeter;
-  delete obj.lastMeterReading;
-  delete obj.lastMeterUpdate;
-  return obj;
-};
-
 const validateUniqueFields = async (data, driverId = null) => {
   const uniqueFields = [
     { field: "phoneNumber", message: "phone number" },
@@ -65,18 +29,33 @@ const validateUniqueFields = async (data, driverId = null) => {
 };
 
 exports.getAllDrivers = async (req, res) => {
-  const drivers = await Driver.find().populate(dbOptions.car);
-  const data = drivers.map(cleanDriver);
+  const drivers = await Driver.find()
+    .select(
+      "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
+    )
+    .populate({
+      path: "car",
+      select:
+        "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt drivers",
+    });
 
   res.status(200).json({
     status: "success",
-    results: data.length,
-    data,
+    results: drivers.length,
+    data: drivers,
   });
 };
 
 exports.getDriverById = async (req, res, next) => {
-  const driver = await Driver.findById(req.params.id).populate(dbOptions.car);
+  const driver = await Driver.findById(req.params.id)
+    .select(
+      "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
+    )
+    .populate({
+      path: "car",
+      select:
+        "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt drivers",
+    });
 
   if (!driver) {
     return next(
@@ -86,14 +65,22 @@ exports.getDriverById = async (req, res, next) => {
 
   res.status(200).json({
     status: "success",
-    data: cleanDriver(driver),
+    data: driver,
   });
 };
 
 exports.getDriverByPhoneNumber = async (req, res, next) => {
   const driver = await Driver.findOne({
     phoneNumber: req.params.phoneNumber,
-  }).populate(dbOptions.car);
+  })
+    .select(
+      "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
+    )
+    .populate({
+      path: "car",
+      select:
+        "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt drivers",
+    });
 
   if (!driver) {
     return next(
@@ -106,7 +93,7 @@ exports.getDriverByPhoneNumber = async (req, res, next) => {
 
   res.status(200).json({
     status: "success",
-    data: cleanDriver(driver),
+    data: driver,
   });
 };
 
@@ -127,7 +114,15 @@ exports.updateDriver = async (req, res, next) => {
 
     const driver = await Driver.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
-    }).populate(dbOptions.car);
+    })
+      .select(
+        "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
+      )
+      .populate({
+        path: "car",
+        select:
+          "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt drivers",
+      });
 
     if (!driver) {
       return next(
@@ -138,7 +133,7 @@ exports.updateDriver = async (req, res, next) => {
     res.status(200).json({
       status: "success",
       message: "Driver updated successfully",
-      data: cleanDriver(driver),
+      data: driver,
     });
   } catch (error) {
     next(error);
@@ -176,7 +171,21 @@ exports.getDriverMaintenanceRecords = async (req, res, next) => {
   }
 
   const records = await Maintenance.find({ driver: req.params.id })
-    .populate(dbOptions.maintenance.populate)
+    .select("-__v")
+    .populate([
+      {
+        path: "car",
+        select: "brand model plateNumber year color status ",
+      },
+      {
+        path: "subCategories",
+        select: "name description ",
+        populate: {
+          path: "category",
+          select: "name",
+        },
+      },
+    ])
     .sort({ date: -1 });
 
   res.status(200).json({
@@ -195,25 +204,37 @@ exports.getDriverMe = async (req, res, next) => {
     }
 
     const driver = await Driver.findById(req.driver._id)
-      .select("-__v -password")
-      .populate(dbOptions.car);
+      .select(
+        "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
+      )
+      .populate({
+        path: "car",
+        select:
+          "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt drivers",
+      });
 
     const maintenanceHistory = await Maintenance.find({
       driver: req.driver._id,
     })
-      .populate(dbOptions.maintenance.populate)
+      .select("-__v")
+      .populate([
+        {
+          path: "car",
+          select: "brand model plateNumber year color status",
+        },
+        {
+          path: "subCategories",
+          select: "name description",
+          populate: {
+            path: "category",
+            select: "name",
+          },
+        },
+      ])
       .sort({ date: -1 });
 
     const driverObj = driver.toObject();
-    delete driverObj.carMeter;
-    delete driverObj.lastMeterReading;
-    delete driverObj.lastMeterUpdate;
-    delete driverObj.maintenanceHistory;
-    driverObj.maintenanceHistory = maintenanceHistory.map((m) => {
-      const mObj = m.toObject();
-      delete mObj.__v;
-      return mObj;
-    });
+    driverObj.maintenanceHistory = maintenanceHistory;
 
     res.status(200).json({
       status: "success",
@@ -246,7 +267,15 @@ exports.searchDrivers = async (req, res, next) => {
   if (nationalId)
     searchQuery.nationalId = { $regex: nationalId, $options: "i" };
 
-  const drivers = await Driver.find(searchQuery).populate(dbOptions.car);
+  const drivers = await Driver.find(searchQuery)
+    .select(
+      "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
+    )
+    .populate({
+      path: "car",
+      select:
+        "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt drivers",
+    });
 
   res.status(200).json({
     status: "success",

@@ -3,6 +3,7 @@ const fs = require("fs");
 const FormData = require("form-data");
 const ApiError = require("../utils/apiError");
 const Car = require("../models/carsModel");
+const Driver = require("../models/driverModel"); // <-- Add this at the top
 
 exports.analyzeMeterImage = async (req, res, next) => {
   if (!req.file) {
@@ -95,15 +96,38 @@ exports.updateDriverMeterReading = async (req, res, next) => {
       return next(new ApiError("No car is assigned to this driver", 400));
     }
 
-    const car = await Car.findById(driver.car);
+    await Car.findByIdAndUpdate(
+      driver.car,
+      { meterReading, lastMeterUpdate: currentDate },
+      { new: true }
+    );
 
-    if (!car) {
-      return next(new ApiError("The assigned car could not be found", 404));
-    }
-
-    car.meterReading = meterReading;
-    car.lastMeterUpdate = currentDate;
-    await car.save();
+    const updatedCar = await Car.findById(driver.car)
+      .select(
+        "_id plateNumber brand model year color status meterReading lastMeterUpdate createdAt updatedAt"
+      )
+      .populate({
+        path: "driver",
+        select: "_id name phoneNumber nationalId licenseNumber address role",
+      })
+      .populate({
+        path: "maintenanceHistory",
+        select: "_id description cost mechanicCost date createdAt updatedAt",
+        populate: [
+          {
+            path: "subCategories",
+            select: "_id name description",
+            populate: {
+              path: "category",
+              select: "_id name",
+            },
+          },
+          {
+            path: "driver",
+            select: "_id name phoneNumber nationalId licenseNumber",
+          },
+        ],
+      });
 
     driver.carMeter = {
       reading: meterReading,
@@ -115,7 +139,7 @@ exports.updateDriverMeterReading = async (req, res, next) => {
       status: "success",
       message: "Car meter reading updated successfully",
       data: {
-        driver,
+        car: updatedCar,
       },
     });
   } catch (error) {

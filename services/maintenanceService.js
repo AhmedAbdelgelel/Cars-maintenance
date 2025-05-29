@@ -2,64 +2,55 @@ const Maintenance = require("../models/maintenanceModel");
 const Car = require("../models/carsModel");
 const ApiError = require("../utils/apiError");
 
-const dbOptions = {
-  populate: {
-    car: {
+exports.getAllMaintenanceRecords = async (req, res) => {
+  const records = await Maintenance.find()
+    .select("-__v")
+    .populate({
       path: "car",
       select:
         "_id plateNumber brand model year color status meterReading lastMeterUpdate",
-    },
-    driver: {
+    })
+    .populate({
       path: "driver",
       select: "_id name phoneNumber nationalId licenseNumber",
-    },
-    subCategories: {
+    })
+    .populate({
       path: "subCategories",
       select: "name description",
       populate: {
         path: "category",
         select: "name",
       },
-    },
-  },
-};
-
-const cleanRecord = (record) => {
-  const obj = record.toObject();
-  delete obj.__v;
-  if (obj.car && typeof obj.car === "object") {
-    delete obj.car.__v;
-  }
-  if (obj.driver && typeof obj.driver === "object") {
-    delete obj.driver.__v;
-    delete obj.driver.password;
-    delete obj.driver.carMeter;
-    delete obj.driver.lastMeterReading;
-    delete obj.driver.lastMeterUpdate;
-    delete obj.driver.maintenanceHistory;
-  }
-  return obj;
-};
-
-const populateRecord = (query) =>
-  query
-    .populate(dbOptions.populate.car)
-    .populate(dbOptions.populate.driver)
-    .populate(dbOptions.populate.subCategories);
-
-exports.getAllMaintenanceRecords = async (req, res) => {
-  const records = await populateRecord(Maintenance.find()).sort({ date: -1 });
-  const cleanRecords = records.map(cleanRecord);
+    })
+    .sort({ date: -1 });
 
   res.status(200).json({
     status: "success",
-    results: cleanRecords.length,
-    data: cleanRecords,
+    results: records.length,
+    data: records,
   });
 };
 
 exports.getMaintenanceById = async (req, res, next) => {
-  const record = await populateRecord(Maintenance.findById(req.params.id));
+  const record = await Maintenance.findById(req.params.id)
+    .select("-__v")
+    .populate({
+      path: "car",
+      select:
+        "_id plateNumber brand model year color status meterReading lastMeterUpdate",
+    })
+    .populate({
+      path: "driver",
+      select: "_id name phoneNumber nationalId licenseNumber",
+    })
+    .populate({
+      path: "subCategories",
+      select: "name description",
+      populate: {
+        path: "category",
+        select: "name",
+      },
+    });
 
   if (!record) {
     return next(
@@ -72,7 +63,7 @@ exports.getMaintenanceById = async (req, res, next) => {
 
   res.status(200).json({
     status: "success",
-    data: cleanRecord(record),
+    data: record,
   });
 };
 
@@ -83,6 +74,7 @@ exports.getMaintenanceByCarId = async (req, res, next) => {
   }
 
   const records = await Maintenance.find({ car: req.params.carId })
+    .select("-__v")
     .populate({
       path: "car",
       select:
@@ -92,27 +84,20 @@ exports.getMaintenanceByCarId = async (req, res, next) => {
       path: "driver",
       select: "_id name phoneNumber nationalId licenseNumber",
     })
+    .populate({
+      path: "subCategories",
+      select: "name description",
+      populate: {
+        path: "category",
+        select: "name",
+      },
+    })
     .sort({ date: -1 });
-
-  const cleanRecords = records.map((record) => {
-    const obj = record.toObject();
-    delete obj.__v;
-    if (obj.car && typeof obj.car === "object") delete obj.car.__v;
-    if (obj.driver && typeof obj.driver === "object") {
-      delete obj.driver.__v;
-      delete obj.driver.password;
-      delete obj.driver.carMeter;
-      delete obj.driver.lastMeterReading;
-      delete obj.driver.lastMeterUpdate;
-      delete obj.driver.maintenanceHistory;
-    }
-    return obj;
-  });
 
   res.status(200).json({
     status: "success",
-    results: cleanRecords.length,
-    data: cleanRecords,
+    results: records.length,
+    data: records,
   });
 };
 
@@ -127,21 +112,55 @@ exports.createMaintenanceRecord = async (req, res, next) => {
     $push: { maintenanceHistory: record._id },
   });
 
-  const populatedRecord = await populateRecord(
-    Maintenance.findById(record._id)
-  );
+  const populatedRecord = await Maintenance.findById(record._id)
+    .select("-__v")
+    .populate({
+      path: "car",
+      select:
+        "_id plateNumber brand model year color status meterReading lastMeterUpdate",
+    })
+    .populate({
+      path: "driver",
+      select: "_id name phoneNumber nationalId licenseNumber",
+    })
+    .populate({
+      path: "subCategories",
+      select: "name description",
+      populate: {
+        path: "category",
+        select: "name",
+      },
+    });
 
   res.status(201).json({
     status: "success",
     message: "Maintenance record created successfully",
-    data: cleanRecord(populatedRecord),
+    data: populatedRecord,
   });
 };
 
 exports.updateMaintenanceRecord = async (req, res, next) => {
-  const record = await populateRecord(
-    Maintenance.findByIdAndUpdate(req.params.id, req.body, { new: true })
-  );
+  const record = await Maintenance.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+  })
+    .select("-__v")
+    .populate({
+      path: "car",
+      select:
+        "_id plateNumber brand model year color status meterReading lastMeterUpdate",
+    })
+    .populate({
+      path: "driver",
+      select: "_id name phoneNumber nationalId licenseNumber",
+    })
+    .populate({
+      path: "subCategories",
+      select: "name description",
+      populate: {
+        path: "category",
+        select: "name",
+      },
+    });
 
   if (!record) {
     return next(
@@ -155,7 +174,7 @@ exports.updateMaintenanceRecord = async (req, res, next) => {
   res.status(200).json({
     status: "success",
     message: "Maintenance record updated successfully",
-    data: cleanRecord(record),
+    data: record,
   });
 };
 

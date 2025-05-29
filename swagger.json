@@ -2228,9 +2228,9 @@
                 }
             }
         },
-        "/car-meter/update-reading": {
+        "/car-meter/update-driver-reading": {
             "post": {
-                "summary": "Update a car with meter reading",
+                "summary": "Update a car with driver meter reading",
                 "tags": [ "Car Meter" ],
                 "security": [
                     {
@@ -2693,10 +2693,6 @@
                     "address": {
                         "type": "string",
                         "example": "123 Main St, Anytown"
-                    },
-                    "car": {
-                        "type": "string",
-                        "example": "60d21b4667d0d8992e610c85"
                     }
                 },
                 "required": [ "name", "password", "phoneNumber", "nationalId", "licenseNumber", "address" ]
