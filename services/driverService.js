@@ -3,6 +3,7 @@ const Car = require("../models/carsModel");
 const Maintenance = require("../models/maintenanceModel");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("express-async-handler");
+const ApiFeatures = require("../utils/apiFeatures");
 
 const validateUniqueFields = async (data, driverId = null) => {
   const uniqueFields = [
@@ -46,7 +47,13 @@ exports.createDriver = asyncHandler(async (req, res, next) => {
 });
 
 exports.getAllDrivers = asyncHandler(async (req, res) => {
-  const drivers = await Driver.find()
+  const apiFeatures = new ApiFeatures(Driver.find(), req.query, [
+    "name",
+    "phoneNumber",
+    "licenseNumber",
+    "nationalId",
+  ]).search();
+  const drivers = await apiFeatures.query
     .select(
       "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
     )
@@ -260,45 +267,6 @@ exports.getDriverMe = asyncHandler(async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
-
-exports.searchDrivers = asyncHandler(async (req, res, next) => {
-  const { name, phoneNumber, licenseNumber, nationalId } = req.query;
-
-  if (!name && !phoneNumber && !licenseNumber && !nationalId) {
-    return next(
-      new ApiError(
-        "Please provide at least one search parameter (name, phoneNumber, licenseNumber, or nationalId)",
-        400
-      )
-    );
-  }
-
-  const searchQuery = {};
-
-  if (name) searchQuery.name = { $regex: name, $options: "i" };
-  if (phoneNumber)
-    searchQuery.phoneNumber = { $regex: phoneNumber, $options: "i" };
-  if (licenseNumber)
-    searchQuery.licenseNumber = { $regex: licenseNumber, $options: "i" };
-  if (nationalId)
-    searchQuery.nationalId = { $regex: nationalId, $options: "i" };
-
-  const drivers = await Driver.find(searchQuery)
-    .select(
-      "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
-    )
-    .populate({
-      path: "car",
-      select:
-        "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt drivers",
-    });
-
-  res.status(200).json({
-    status: "success",
-    results: drivers.length,
-    data: drivers,
-  });
 });
 
 exports.getTotalDrivers = asyncHandler(async (req, res, next) => {

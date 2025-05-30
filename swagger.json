@@ -63,6 +63,32 @@
                         "bearerAuth": [ ]
                     }
                 ],
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "plateNumber",
+                        "schema": { "type": "string" },
+                        "description": "Search by plate number"
+                    },
+                    {
+                        "in": "query",
+                        "name": "brand",
+                        "schema": { "type": "string" },
+                        "description": "Search by car brand"
+                    },
+                    {
+                        "in": "query",
+                        "name": "model",
+                        "schema": { "type": "string" },
+                        "description": "Search by car model"
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": { "type": "string" },
+                        "description": "Filter by car status"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "A list of cars",
@@ -377,6 +403,32 @@
                 "security": [
                     {
                         "bearerAuth": [ ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "name",
+                        "schema": { "type": "string" },
+                        "description": "Search by driver name"
+                    },
+                    {
+                        "in": "query",
+                        "name": "phoneNumber",
+                        "schema": { "type": "string" },
+                        "description": "Search by phone number"
+                    },
+                    {
+                        "in": "query",
+                        "name": "licenseNumber",
+                        "schema": { "type": "string" },
+                        "description": "Search by license number"
+                    },
+                    {
+                        "in": "query",
+                        "name": "nationalId",
+                        "schema": { "type": "string" },
+                        "description": "Search by national ID"
                     }
                 ],
                 "responses": {
@@ -1294,6 +1346,14 @@
                 "tags": [ "Categories" ],
                 "security": [ { "bearerAuth": [ ] } ],
                 "description": "Requires authentication as admin or driver.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "name",
+                        "schema": { "type": "string" },
+                        "description": "Search by category name"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "A list of maintenance categories",

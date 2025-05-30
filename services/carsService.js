@@ -3,22 +3,15 @@ const Driver = require("../models/driverModel");
 const Maintenance = require("../models/maintenanceModel");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("express-async-handler");
-
-const textSearchFields = ["plateNumber", "brand", "model"];
-
-const buildSearchQuery = (filters) => {
-  const query = {};
-  textSearchFields.forEach((field) => {
-    if (filters[field]) {
-      query[field] = { $regex: filters[field], $options: "i" };
-    }
-  });
-  if (filters.status) query.status = filters.status;
-  return query;
-};
+const ApiFeatures = require("../utils/apiFeatures");
 
 exports.getAllCars = asyncHandler(async (req, res) => {
-  const cars = await Car.find(buildSearchQuery(req.query))
+  const apiFeatures = new ApiFeatures(Car.find(), req.query, [
+    "plateNumber",
+    "brand",
+    "model",
+  ]).search();
+  const cars = await apiFeatures.query
     .select("-__v")
     .populate({
       path: "driver",

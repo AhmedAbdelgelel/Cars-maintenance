@@ -20,8 +20,6 @@ router.get("/me", protect, restrictTo("driver"), getDriverMe);
 
 router.route("/").get(protect, restrictTo("admin"), getAllDrivers);
 
-router.route("/search").get(protect, restrictTo("admin"), searchDrivers);
-
 router.route("/total").get(protect, restrictTo("admin"), getTotalDrivers);
 
 router

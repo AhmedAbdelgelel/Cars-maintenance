@@ -1,8 +1,12 @@
 const Category = require("../models/categoryModel");
 const ApiError = require("../utils/apiError");
+const ApiFeatures = require("../utils/apiFeatures");
 
 exports.getAllCategories = async (req, res) => {
-  const categories = await Category.find()
+  const apiFeatures = new ApiFeatures(Category.find(), req.query, [
+    "name",
+  ]).search();
+  const categories = await apiFeatures.query
     .populate({
       path: "subCategories",
       select: "-__v",
