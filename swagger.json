@@ -61,32 +61,13 @@
                 "security": [
                     {
                         "bearerAuth": [ ]
-                    }
-                ],
+                    } ],
                 "parameters": [
                     {
                         "in": "query",
-                        "name": "plateNumber",
+                        "name": "search",
                         "schema": { "type": "string" },
-                        "description": "Search by plate number"
-                    },
-                    {
-                        "in": "query",
-                        "name": "brand",
-                        "schema": { "type": "string" },
-                        "description": "Search by car brand"
-                    },
-                    {
-                        "in": "query",
-                        "name": "model",
-                        "schema": { "type": "string" },
-                        "description": "Search by car model"
-                    },
-                    {
-                        "in": "query",
-                        "name": "status",
-                        "schema": { "type": "string" },
-                        "description": "Filter by car status"
+                        "description": "Search across plate number, brand, and model fields"
                     }
                 ],
                 "responses": {
@@ -404,31 +385,12 @@
                     {
                         "bearerAuth": [ ]
                     }
-                ],
-                "parameters": [
+                ], "parameters": [
                     {
                         "in": "query",
-                        "name": "name",
+                        "name": "search",
                         "schema": { "type": "string" },
-                        "description": "Search by driver name"
-                    },
-                    {
-                        "in": "query",
-                        "name": "phoneNumber",
-                        "schema": { "type": "string" },
-                        "description": "Search by phone number"
-                    },
-                    {
-                        "in": "query",
-                        "name": "licenseNumber",
-                        "schema": { "type": "string" },
-                        "description": "Search by license number"
-                    },
-                    {
-                        "in": "query",
-                        "name": "nationalId",
-                        "schema": { "type": "string" },
-                        "description": "Search by national ID"
+                        "description": "Search across name, phone number, license number, and national ID fields"
                     }
                 ],
                 "responses": {
@@ -869,102 +831,7 @@
                         }
                     }
                 }
-            }
-        },
-        "/drivers/search": {
-            "get": {
-                "summary": "Search drivers",
-                "tags": [ "Drivers" ],
-                "security": [
-                    {
-                        "bearerAuth": [ ]
-                    }
-                ],
-                "description": "Search drivers by name, phone number, license number, or national ID.",
-                "parameters": [
-                    {
-                        "in": "query",
-                        "name": "name",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "description": "Search by driver name"
-                    },
-                    {
-                        "in": "query",
-                        "name": "phoneNumber",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "description": "Search by phone number"
-                    },
-                    {
-                        "in": "query",
-                        "name": "licenseNumber",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "description": "Search by license number"
-                    },
-                    {
-                        "in": "query",
-                        "name": "nationalId",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "description": "Search by national ID"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Drivers matching search criteria",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
-                                        "results": {
-                                            "type": "number",
-                                            "example": 3
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/Driver"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad request - No search parameters provided",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Error"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized - Not logged in or invalid token",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Error"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
+            } },
         "/maintenance": {
             "get": {
                 "summary": "Get all maintenance records",
@@ -1345,11 +1212,10 @@
                 "summary": "Get all maintenance categories",
                 "tags": [ "Categories" ],
                 "security": [ { "bearerAuth": [ ] } ],
-                "description": "Requires authentication as admin or driver.",
-                "parameters": [
+                "description": "Requires authentication as admin or driver.", "parameters": [
                     {
                         "in": "query",
-                        "name": "name",
+                        "name": "search",
                         "schema": { "type": "string" },
                         "description": "Search by category name"
                     }

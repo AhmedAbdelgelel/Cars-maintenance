@@ -6,13 +6,19 @@ class ApiFeatures {
   }
 
   search() {
-    const searchQuery = {};
-    this.searchFields.forEach((field) => {
-      if (this.queryString[field]) {
-        searchQuery[field] = { $regex: this.queryString[field], $options: "i" };
-      }
-    });
-    this.query = this.query.find(searchQuery);
+    const { search } = this.queryString;
+
+    if (search && this.searchFields.length > 0) {
+      const regex = new RegExp(search, "i");
+      const searchQuery = {
+        $or: this.searchFields.map((field) => ({
+          [field]: regex,
+        })),
+      };
+
+      this.query = this.query.find(searchQuery);
+    }
+
     return this;
   }
 }
