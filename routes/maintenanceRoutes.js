@@ -16,7 +16,6 @@ router
 router
   .route("/")
   .get(protect, restrictTo("admin"), getAllMaintenanceRecords)
-
   .post(protect, restrictTo("admin", "driver"), createMaintenanceRecord);
 
 router

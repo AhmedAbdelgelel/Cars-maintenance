@@ -1235,7 +1235,7 @@
                     }
                 }
             } },
-        "/maintenance/costs": {
+        "/maintenance/cost": {
             "get": {
                 "summary": "Get total maintenance costs",
                 "tags": [ "Maintenance" ],

@@ -41,6 +41,13 @@ exports.getMaintenanceCostRecords = asyncHandler(async (req, res) => {
         totalMechanicCost: { $sum: "$mechanicCost" },
       },
     },
+    {
+      $project: {
+        _id: 0,
+        totalCost: 1,
+        totalMechanicCost: 1,
+      },
+    },
   ]);
 
   if (records.length === 0) {
