@@ -79,10 +79,12 @@ exports.createSubCategory = async (req, res, next) => {
     });
   }
 
+  const data = await SubCategory.findById(subCategory._id).select("-__v");
+
   res.status(201).json({
     status: "success",
     message: "Subcategory created successfully",
-    data: await SubCategory.findById(subCategory._id).select("-__v"),
+    data,
   });
 };
 
