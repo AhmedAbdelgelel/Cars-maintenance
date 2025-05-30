@@ -9,6 +9,9 @@ const {
   getMaintenanceCostRecords,
 } = require("../services/maintenanceService");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
+router
+  .route("/cost")
+  .get(protect, restrictTo("admin"), getMaintenanceCostRecords);
 
 router
   .route("/")
@@ -21,9 +24,5 @@ router
   .get(protect, restrictTo("admin", "driver"), getMaintenanceById)
   .put(protect, restrictTo("admin"), updateMaintenanceRecord)
   .delete(protect, restrictTo("admin"), deleteMaintenanceRecord);
-
-router
-  .route("/cost")
-  .get(protect, restrictTo("admin"), getMaintenanceCostRecords);
 
 module.exports = router;
