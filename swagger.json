@@ -416,8 +416,84 @@
                                             }
                                         }
                                     }
+                                } } }
+                    }
+                }
+            }
+        },
+        "/drivers/create-driver": {
+            "post": {
+                "summary": "Create a new driver",
+                "tags": [ "Drivers" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Creates a new driver. Requires admin authentication. All driver fields must be unique (phone number, national ID, license number).",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DriverInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Driver created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Driver created successfully"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Driver"
+                                        }
+                                    }
                                 }
-                            } }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Validation error or duplicate fields",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Not logged in or invalid token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Admin access required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
                     }
                 }
             }

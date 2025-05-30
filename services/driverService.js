@@ -10,7 +10,6 @@ const validateUniqueFields = async (data, driverId = null) => {
     { field: "phoneNumber", message: "phone number" },
     { field: "nationalId", message: "national ID" },
     { field: "licenseNumber", message: "license number" },
-    { field: "email", message: "email" },
   ];
 
   for (const { field, message } of uniqueFields) {
