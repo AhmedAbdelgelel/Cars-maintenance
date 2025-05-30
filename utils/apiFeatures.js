@@ -16,7 +16,7 @@ class ApiFeatures {
         })),
       };
 
-      this.query = this.query.find(searchQuery);
+      this.query = this.query.where(searchQuery);
     }
 
     return this;
