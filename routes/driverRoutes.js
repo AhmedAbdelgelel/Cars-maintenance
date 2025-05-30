@@ -9,14 +9,20 @@ const {
   getDriverMaintenanceRecords,
   getDriverMe,
   searchDrivers,
+  getTotalDrivers,
+  createDriver,
 } = require("../services/driverService");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
+
+router.post("/create-driver", protect, restrictTo("admin"), createDriver);
 
 router.get("/me", protect, restrictTo("driver"), getDriverMe);
 
 router.route("/").get(protect, restrictTo("admin"), getAllDrivers);
 
 router.route("/search").get(protect, restrictTo("admin"), searchDrivers);
+
+router.route("/total").get(protect, restrictTo("admin"), getTotalDrivers);
 
 router
   .route("/:id")

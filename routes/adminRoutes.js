@@ -8,21 +8,17 @@ const {
   updateAdmin,
   deleteAdmin,
 } = require("../services/adminService");
-const { protect } = require("../middlewares/authMiddleware");
+
+const { protect, restrictTo } = require("../middlewares/authMiddleware");
+
 router.post("/register", register);
 router.post("/login", login);
-router.use(protect);
-router.use((req, res, next) => {
-  if (!req.admin) {
-    return res.status(403).json({
-      status: "error",
-      message: "You do not have permission to perform this action",
-    });
-  }
-  next();
-});
+
+router.use(protect, restrictTo("admin"));
+
 router.get("/", getAllAdmins);
 router.get("/:id", getAdminById);
 router.put("/:id", updateAdmin);
 router.delete("/:id", deleteAdmin);
+
 module.exports = router;

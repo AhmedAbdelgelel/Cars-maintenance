@@ -1,8 +1,9 @@
 const Maintenance = require("../models/maintenanceModel");
 const Car = require("../models/carsModel");
 const ApiError = require("../utils/apiError");
+const asyncHandler = require("express-async-handler");
 
-exports.getAllMaintenanceRecords = async (req, res) => {
+exports.getAllMaintenanceRecords = asyncHandler(async (req, res) => {
   const records = await Maintenance.find()
     .select("-__v")
     .populate({
@@ -29,9 +30,37 @@ exports.getAllMaintenanceRecords = async (req, res) => {
     results: records.length,
     data: records,
   });
-};
+});
 
-exports.getMaintenanceById = async (req, res, next) => {
+exports.getMaintenanceCostRecords = asyncHandler(async (req, res) => {
+  const records = await Maintenance.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalCost: { $sum: "$cost" },
+        totalMechanicCost: { $sum: "$mechanicCost" },
+      },
+    },
+  ]);
+
+  if (records.length === 0) {
+    return res.status(200).json({
+      status: "success",
+      message: "No maintenance records found",
+      data: {
+        totalCost: 0,
+        totalMechanicCost: 0,
+      },
+    });
+  }
+
+  res.status(200).json({
+    status: "success",
+    data: records[0],
+  });
+});
+
+exports.getMaintenanceById = asyncHandler(async (req, res, next) => {
   const record = await Maintenance.findById(req.params.id)
     .select("-__v")
     .populate({
@@ -65,9 +94,9 @@ exports.getMaintenanceById = async (req, res, next) => {
     status: "success",
     data: record,
   });
-};
+});
 
-exports.getMaintenanceByCarId = async (req, res, next) => {
+exports.getMaintenanceByCarId = asyncHandler(async (req, res, next) => {
   const car = await Car.findById(req.params.carId);
   if (!car) {
     return next(new ApiError(`No car found with id: ${req.params.carId}`, 404));
@@ -99,9 +128,9 @@ exports.getMaintenanceByCarId = async (req, res, next) => {
     results: records.length,
     data: records,
   });
-};
+});
 
-exports.createMaintenanceRecord = async (req, res, next) => {
+exports.createMaintenanceRecord = asyncHandler(async (req, res, next) => {
   const car = await Car.findById(req.body.car);
   if (!car) {
     return next(new ApiError(`No car found with id: ${req.body.car}`, 404));
@@ -137,9 +166,9 @@ exports.createMaintenanceRecord = async (req, res, next) => {
     message: "Maintenance record created successfully",
     data: populatedRecord,
   });
-};
+});
 
-exports.updateMaintenanceRecord = async (req, res, next) => {
+exports.updateMaintenanceRecord = asyncHandler(async (req, res, next) => {
   const record = await Maintenance.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
   })
@@ -176,9 +205,9 @@ exports.updateMaintenanceRecord = async (req, res, next) => {
     message: "Maintenance record updated successfully",
     data: record,
   });
-};
+});
 
-exports.deleteMaintenanceRecord = async (req, res, next) => {
+exports.deleteMaintenanceRecord = asyncHandler(async (req, res, next) => {
   const record = await Maintenance.findById(req.params.id);
 
   if (!record) {
@@ -201,4 +230,4 @@ exports.deleteMaintenanceRecord = async (req, res, next) => {
     status: "success",
     message: "Maintenance record deleted successfully",
   });
-};
+});

@@ -2,174 +2,141 @@ const Admin = require("../models/adminModel");
 const ApiError = require("../utils/apiError");
 const generateToken = require("../utils/generateToken");
 const bcrypt = require("bcryptjs");
+const asyncHandler = require("express-async-handler");
 
-exports.register = async (req, res, next) => {
-  try {
-    const { name, email, password, phoneNumber } = req.body;
+exports.register = asyncHandler(async (req, res, next) => {
+  const { name, email, password, phoneNumber } = req.body;
 
-    if (!name || !email || !password || !phoneNumber) {
-      return next(new ApiError("Please provide all required fields", 400));
-    }
-    const existingAdmin = await Admin.findOne({
-      $or: [{ email }, { phoneNumber }],
-    });
+  if (!name || !email || !password || !phoneNumber) {
+    return next(new ApiError("Please provide all required fields", 400));
+  }
+  const existingAdmin = await Admin.findOne({
+    $or: [{ email }, { phoneNumber }],
+  });
 
-    if (existingAdmin) {
-      return next(
-        new ApiError("Admin with this email or phone already exists", 400)
-      );
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const createdAdmin = await Admin.create({
-      name,
-      email,
-      password: hashedPassword,
-      phoneNumber,
-    });
-
-    const admin = await Admin.findById(createdAdmin._id).select(
-      "-__v -password"
+  if (existingAdmin) {
+    return next(
+      new ApiError("Admin with this email or phone already exists", 400)
     );
-
-    const token = generateToken(admin._id, admin.role || "admin");
-
-    res.status(201).json({
-      status: "success",
-      token,
-      admin,
-    });
-  } catch (error) {
-    next(error);
   }
-};
 
-exports.login = async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const createdAdmin = await Admin.create({
+    name,
+    email,
+    password: hashedPassword,
+    phoneNumber,
+  });
 
-    if (!email || !password) {
-      return next(new ApiError("Please provide email and password", 400));
-    }
-    const admin = await Admin.findOne({ email }).select("-__v");
+  const admin = await Admin.findById(createdAdmin._id).select("-__v -password");
 
-    if (!admin) {
-      return next(new ApiError("Incorrect email or password", 401));
-    }
+  const token = generateToken(admin._id, admin.role || "admin");
 
-    const isMatch = await bcrypt.compare(password, admin.password);
-    if (!isMatch) {
-      return next(new ApiError("Incorrect email or password", 401));
-    }
+  res.status(201).json({
+    status: "success",
+    token,
+    admin,
+  });
+});
 
-    if (!admin.isActive) {
-      return next(new ApiError("Your account has been deactivated", 401));
-    }
+exports.login = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
 
-    const token = generateToken(admin._id, admin.role || "admin");
-
-    const safeAdmin = await Admin.findById(admin._id).select("-password -__v");
-
-    res.status(200).json({
-      status: "success",
-      token,
-      admin: safeAdmin,
-    });
-  } catch (error) {
-    next(error);
+  if (!email || !password) {
+    return next(new ApiError("Please provide email and password", 400));
   }
-};
+  const admin = await Admin.findOne({ email }).select("-__v");
 
-exports.getAllAdmins = async (req, res, next) => {
-  try {
-    const admins = await Admin.find({ isActive: true }).select(
-      "-password -__v"
+  if (!admin) {
+    return next(new ApiError("Incorrect email or password", 401));
+  }
+
+  const isMatch = await bcrypt.compare(password, admin.password);
+  if (!isMatch) {
+    return next(new ApiError("Incorrect email or password", 401));
+  }
+
+  if (!admin.isActive) {
+    return next(new ApiError("Your account has been deactivated", 401));
+  }
+
+  const token = generateToken(admin._id, admin.role || "admin");
+
+  const safeAdmin = await Admin.findById(admin._id).select("-password -__v");
+
+  res.status(200).json({
+    status: "success",
+    token,
+    admin: safeAdmin,
+  });
+});
+
+exports.getAllAdmins = asyncHandler(async (req, res) => {
+  const admins = await Admin.find({ isActive: true }).select("-password -__v");
+
+  res.status(200).json({
+    status: "success",
+    results: admins.length,
+    admins,
+  });
+});
+
+exports.getAdminById = asyncHandler(async (req, res, next) => {
+  const admin = await Admin.findById(req.params.id).select("-password -__v");
+
+  if (!admin) {
+    return next(new ApiError(`No admin found with id: ${req.params.id}`, 404));
+  }
+
+  res.status(200).json({
+    status: "success",
+    admin,
+  });
+});
+
+exports.updateAdmin = asyncHandler(async (req, res, next) => {
+  const { name, email, phoneNumber, isActive } = req.body;
+
+  if (
+    (email && (await Admin.exists({ email, _id: { $ne: req.params.id } }))) ||
+    (phoneNumber &&
+      (await Admin.exists({ phoneNumber, _id: { $ne: req.params.id } })))
+  ) {
+    return next(
+      new ApiError("Admin with this email or phone already exists", 400)
     );
-
-    res.status(200).json({
-      status: "success",
-      results: admins.length,
-      admins,
-    });
-  } catch (error) {
-    next(error);
   }
-};
 
-exports.getAdminById = async (req, res, next) => {
-  try {
-    const admin = await Admin.findById(req.params.id).select("-password -__v");
+  const admin = await Admin.findByIdAndUpdate(
+    req.params.id,
+    { name, email, phoneNumber, isActive },
+    { new: true, runValidators: true }
+  ).select("-password -__v");
 
-    if (!admin) {
-      return next(
-        new ApiError(`No admin found with id: ${req.params.id}`, 404)
-      );
-    }
-
-    res.status(200).json({
-      status: "success",
-      admin,
-    });
-  } catch (error) {
-    next(error);
+  if (!admin) {
+    return next(new ApiError(`No admin found with id: ${req.params.id}`, 404));
   }
-};
 
-exports.updateAdmin = async (req, res, next) => {
-  try {
-    const { name, email, phoneNumber, isActive } = req.body;
+  res.status(200).json({
+    status: "success",
+    message: "Admin updated",
+    admin,
+  });
+});
 
-    if (
-      (email && (await Admin.exists({ email, _id: { $ne: req.params.id } }))) ||
-      (phoneNumber &&
-        (await Admin.exists({ phoneNumber, _id: { $ne: req.params.id } })))
-    ) {
-      return next(
-        new ApiError("Admin with this email or phone already exists", 400)
-      );
-    }
+exports.deleteAdmin = asyncHandler(async (req, res, next) => {
+  const admin = await Admin.findByIdAndUpdate(
+    req.params.id,
+    { isActive: false },
+    { new: true }
+  );
 
-    const admin = await Admin.findByIdAndUpdate(
-      req.params.id,
-      { name, email, phoneNumber, isActive },
-      { new: true, runValidators: true }
-    ).select("-password -__v");
-
-    if (!admin) {
-      return next(
-        new ApiError(`No admin found with id: ${req.params.id}`, 404)
-      );
-    }
-
-    res.status(200).json({
-      status: "success",
-      message: "Admin updated",
-      admin,
-    });
-  } catch (error) {
-    next(error);
+  if (!admin) {
+    return next(new ApiError(`No admin found with id: ${req.params.id}`, 404));
   }
-};
 
-exports.deleteAdmin = async (req, res, next) => {
-  try {
-    const admin = await Admin.findByIdAndUpdate(
-      req.params.id,
-      { isActive: false },
-      { new: true }
-    );
-
-    if (!admin) {
-      return next(
-        new ApiError(`No admin found with id: ${req.params.id}`, 404)
-      );
-    }
-
-    res.status(200).json({
-      status: "success",
-      message: "Admin deactivated",
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+  res.status(200).json({
+    status: "success",
+    message: "Admin deactivated",
+  });
+});

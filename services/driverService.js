@@ -2,6 +2,7 @@ const Driver = require("../models/driverModel");
 const Car = require("../models/carsModel");
 const Maintenance = require("../models/maintenanceModel");
 const ApiError = require("../utils/apiError");
+const asyncHandler = require("express-async-handler");
 
 const validateUniqueFields = async (data, driverId = null) => {
   const uniqueFields = [
@@ -28,7 +29,23 @@ const validateUniqueFields = async (data, driverId = null) => {
   }
 };
 
-exports.getAllDrivers = async (req, res) => {
+exports.createDriver = asyncHandler(async (req, res, next) => {
+  try {
+    await validateUniqueFields(req.body);
+
+    const driver = await Driver.create(req.body);
+
+    res.status(201).json({
+      status: "success",
+      message: "Driver created successfully",
+      data: driver,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+exports.getAllDrivers = asyncHandler(async (req, res) => {
   const drivers = await Driver.find()
     .select(
       "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
@@ -44,9 +61,9 @@ exports.getAllDrivers = async (req, res) => {
     results: drivers.length,
     data: drivers,
   });
-};
+});
 
-exports.getDriverById = async (req, res, next) => {
+exports.getDriverById = asyncHandler(async (req, res, next) => {
   const driver = await Driver.findById(req.params.id)
     .select(
       "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
@@ -67,9 +84,9 @@ exports.getDriverById = async (req, res, next) => {
     status: "success",
     data: driver,
   });
-};
+});
 
-exports.getDriverByPhoneNumber = async (req, res, next) => {
+exports.getDriverByPhoneNumber = asyncHandler(async (req, res, next) => {
   const driver = await Driver.findOne({
     phoneNumber: req.params.phoneNumber,
   })
@@ -95,9 +112,9 @@ exports.getDriverByPhoneNumber = async (req, res, next) => {
     status: "success",
     data: driver,
   });
-};
+});
 
-exports.updateDriver = async (req, res, next) => {
+exports.updateDriver = asyncHandler(async (req, res, next) => {
   try {
     await validateUniqueFields(req.body, req.params.id);
 
@@ -138,9 +155,9 @@ exports.updateDriver = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
+});
 
-exports.deleteDriver = async (req, res, next) => {
+exports.deleteDriver = asyncHandler(async (req, res, next) => {
   const driver = await Driver.findById(req.params.id);
 
   if (!driver) {
@@ -159,9 +176,9 @@ exports.deleteDriver = async (req, res, next) => {
     status: "success",
     message: "Driver deleted successfully",
   });
-};
+});
 
-exports.getDriverMaintenanceRecords = async (req, res, next) => {
+exports.getDriverMaintenanceRecords = asyncHandler(async (req, res, next) => {
   const driver = await Driver.findById(req.params.id);
 
   if (!driver) {
@@ -193,9 +210,9 @@ exports.getDriverMaintenanceRecords = async (req, res, next) => {
     results: records.length,
     data: records,
   });
-};
+});
 
-exports.getDriverMe = async (req, res, next) => {
+exports.getDriverMe = asyncHandler(async (req, res, next) => {
   try {
     if (!req.driver) {
       return next(
@@ -243,9 +260,9 @@ exports.getDriverMe = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
+});
 
-exports.searchDrivers = async (req, res, next) => {
+exports.searchDrivers = asyncHandler(async (req, res, next) => {
   const { name, phoneNumber, licenseNumber, nationalId } = req.query;
 
   if (!name && !phoneNumber && !licenseNumber && !nationalId) {
@@ -282,4 +299,16 @@ exports.searchDrivers = async (req, res, next) => {
     results: drivers.length,
     data: drivers,
   });
-};
+});
+
+exports.getTotalDrivers = asyncHandler(async (req, res, next) => {
+  try {
+    const total = await Driver.countDocuments();
+    res.status(200).json({
+      status: "success",
+      totalDrivers: total,
+    });
+  } catch (error) {
+    next(error);
+  }
+});

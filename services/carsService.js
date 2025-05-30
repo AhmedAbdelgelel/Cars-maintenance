@@ -2,6 +2,7 @@ const Car = require("../models/carsModel");
 const Driver = require("../models/driverModel");
 const Maintenance = require("../models/maintenanceModel");
 const ApiError = require("../utils/apiError");
+const asyncHandler = require("express-async-handler");
 
 const textSearchFields = ["plateNumber", "brand", "model"];
 
@@ -16,7 +17,7 @@ const buildSearchQuery = (filters) => {
   return query;
 };
 
-exports.getAllCars = async (req, res) => {
+exports.getAllCars = asyncHandler(async (req, res) => {
   const cars = await Car.find(buildSearchQuery(req.query))
     .select("-__v")
     .populate({
@@ -48,9 +49,17 @@ exports.getAllCars = async (req, res) => {
     results: cars.length,
     data: cars,
   });
-};
+});
 
-exports.getCarById = async (req, res, next) => {
+exports.getTotalCarsNumber = asyncHandler(async (req, res) => {
+  const totalCars = await Car.countDocuments();
+  res.status(200).json({
+    status: "success",
+    totalCars,
+  });
+});
+
+exports.getCarById = asyncHandler(async (req, res, next) => {
   const car = await Car.findById(req.params.id)
     .select("-__v")
     .populate({
@@ -87,9 +96,9 @@ exports.getCarById = async (req, res, next) => {
     status: "success",
     data: car,
   });
-};
+});
 
-exports.createCar = async (req, res, next) => {
+exports.createCar = asyncHandler(async (req, res, next) => {
   const existingCar = await Car.findOne({ plateNumber: req.body.plateNumber });
 
   if (existingCar) {
@@ -115,9 +124,9 @@ exports.createCar = async (req, res, next) => {
     message: "Car created successfully",
     data: car,
   });
-};
+});
 
-exports.updateCar = async (req, res, next) => {
+exports.updateCar = asyncHandler(async (req, res, next) => {
   try {
     if (req.body.status && !req.admin) {
       return next(
@@ -175,9 +184,9 @@ exports.updateCar = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
+});
 
-exports.deleteCar = async (req, res, next) => {
+exports.deleteCar = asyncHandler(async (req, res, next) => {
   const car = await Car.findById(req.params.id);
 
   if (!car) {
@@ -195,4 +204,4 @@ exports.deleteCar = async (req, res, next) => {
     status: "success",
     message: "Car deleted successfully",
   });
-};
+});

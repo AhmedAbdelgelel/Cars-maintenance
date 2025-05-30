@@ -315,6 +315,59 @@
                         }
                     }
                 }
+            } },
+        "/cars/total": {
+            "get": {
+                "summary": "Get total number of cars",
+                "tags": [ "Cars" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Returns the total count of cars in the system.",
+                "responses": {
+                    "200": {
+                        "description": "Total number of cars retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "totalCars": {
+                                            "type": "number",
+                                            "example": 25
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Not logged in or invalid token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/drivers": {
@@ -711,6 +764,153 @@
                         }
                     }
                 }
+            } },
+        "/drivers/total": {
+            "get": {
+                "summary": "Get total number of drivers",
+                "tags": [ "Drivers" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Returns the total count of drivers in the system.",
+                "responses": {
+                    "200": {
+                        "description": "Total number of drivers retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "totalDrivers": {
+                                            "type": "number",
+                                            "example": 42
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Not logged in or invalid token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/drivers/search": {
+            "get": {
+                "summary": "Search drivers",
+                "tags": [ "Drivers" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Search drivers by name, phone number, license number, or national ID.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "name",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Search by driver name"
+                    },
+                    {
+                        "in": "query",
+                        "name": "phoneNumber",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Search by phone number"
+                    },
+                    {
+                        "in": "query",
+                        "name": "licenseNumber",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Search by license number"
+                    },
+                    {
+                        "in": "query",
+                        "name": "nationalId",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Search by national ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Drivers matching search criteria",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "results": {
+                                            "type": "number",
+                                            "example": 3
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Driver"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - No search parameters provided",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Not logged in or invalid token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/maintenance": {
@@ -1025,6 +1225,58 @@
                     },
                     "404": {
                         "description": "Car not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            } },
+        "/maintenance/costs": {
+            "get": {
+                "summary": "Get total maintenance costs",
+                "tags": [ "Maintenance" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Returns the total maintenance cost and mechanic cost across all records.",
+                "responses": {
+                    "200": {
+                        "description": "Total maintenance costs retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "totalCost": {
+                                                    "type": "number",
+                                                    "example": 15000
+                                                },
+                                                "totalMechanicCost": {
+                                                    "type": "number",
+                                                    "example": 8500
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Not logged in or invalid token",
                         "content": {
                             "application/json": {
                                 "schema": {
