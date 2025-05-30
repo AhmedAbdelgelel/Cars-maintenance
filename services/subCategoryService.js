@@ -5,7 +5,7 @@ const ApiError = require("../utils/apiError");
 exports.getAllSubCategories = async (req, res) => {
   const subCategories = await SubCategory.find()
     .select("-__v")
-    .populate("category", "name"); 
+    .populate("category", "name");
   res.status(200).json({
     status: "success",
     results: subCategories.length,
@@ -48,8 +48,10 @@ exports.getSubCategoriesByCategoryId = async (req, res, next) => {
 };
 
 exports.createSubCategory = async (req, res, next) => {
+  let category = null;
+
   if (req.body.category) {
-    const category = await Category.findById(req.body.category);
+    category = await Category.findById(req.body.category);
     if (!category) {
       return next(
         new ApiError(`No category found with id: ${req.body.category}`, 404)
@@ -71,8 +73,8 @@ exports.createSubCategory = async (req, res, next) => {
 
   const subCategory = await SubCategory.create(req.body);
 
-  if (req.body.category) {
-    await Category.findByIdAndUpdate(req.body.category, {
+  if (category) {
+    await Category.findByIdAndUpdate(category._id, {
       $push: { subCategories: subCategory._id },
     });
   }
