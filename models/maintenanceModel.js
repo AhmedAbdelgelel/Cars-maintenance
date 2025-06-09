@@ -23,6 +23,24 @@ const maintenanceSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  // Custom field responses from driver
+  customFieldData: [
+    {
+      fieldName: {
+        type: String,
+        required: true,
+      },
+      fieldValue: {
+        type: String,
+        required: true,
+      },
+      subcategoryId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "SubCategory",
+        required: true,
+      },
+    },
+  ],
   date: {
     type: Date,
     default: Date.now,

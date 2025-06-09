@@ -3,7 +3,6 @@ const fs = require("fs");
 const FormData = require("form-data");
 const ApiError = require("../utils/apiError");
 const Car = require("../models/carsModel");
-const Driver = require("../models/driverModel"); // <-- Add this at the top
 
 exports.analyzeMeterImage = async (req, res, next) => {
   if (!req.file) {

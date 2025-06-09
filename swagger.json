@@ -946,8 +946,7 @@
                         }
                     }
                 }
-            },
-            "post": {
+            }, "post": {
                 "summary": "Create a new maintenance record",
                 "tags": [ "Maintenance" ],
                 "security": [
@@ -955,18 +954,94 @@
                         "bearerAuth": [ ]
                     }
                 ],
-                "description": "Requires authentication as admin or driver.",
+                "description": "Creates a new maintenance record. Drivers should:\n\n1. **Get available subcategories**: Use `GET /subcategories/category/{categoryId}` to see maintenance types\n2. **Check custom fields**: Use `GET /subcategories/{id}/fields` for each selected subcategory to get required custom fields\n3. **Submit maintenance record**: Include responses to all required custom fields in `customFieldData` array\n\n**Custom Field Workflow:**\n- Each subcategory may have admin-defined custom fields (e.g., current mileage, tire condition)\n- Required fields must be provided or the request will fail\n- All field values are submitted as strings for flexibility\n- Field responses are linked to specific subcategories via `subcategoryId`",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/MaintenanceInput"
+                            },
+                            "examples": {
+                                "basicMaintenance": {
+                                    "summary": "Basic maintenance without custom fields",
+                                    "description": "Simple maintenance record for subcategories with no custom fields",
+                                    "value": {
+                                        "car": "60d21b4667d0d8992e610c85",
+                                        "driver": "60d21b4667d0d8992e610c86",
+                                        "subCategories": [ "60d21b4667d0d8992e610c88" ],
+                                        "description": "Basic oil change service",
+                                        "cost": 50,
+                                        "mechanicCost": 30
+                                    }
+                                },
+                                "maintenanceWithCustomFields": {
+                                    "summary": "Maintenance with required custom fields",
+                                    "description": "Comprehensive maintenance record including driver responses to admin-defined custom fields",
+                                    "value": {
+                                        "car": "60d21b4667d0d8992e610c85",
+                                        "driver": "60d21b4667d0d8992e610c86",
+                                        "subCategories": [ "60d21b4667d0d8992e610c88", "60d21b4667d0d8992e610c89" ],
+                                        "description": "Full service - oil change, tire rotation, and brake inspection",
+                                        "cost": 180,
+                                        "mechanicCost": 120,
+                                        "customFieldData": [
+                                            {
+                                                "fieldName": "currentMileage",
+                                                "fieldValue": "85000",
+                                                "subcategoryId": "60d21b4667d0d8992e610c88"
+                                            },
+                                            {
+                                                "fieldName": "tireCondition",
+                                                "fieldValue": "Good - minimal wear",
+                                                "subcategoryId": "60d21b4667d0d8992e610c89"
+                                            },
+                                            {
+                                                "fieldName": "brakePadThickness",
+                                                "fieldValue": "8mm",
+                                                "subcategoryId": "60d21b4667d0d8992e610c89"
+                                            }
+                                        ]
+                                    }
+                                },
+                                "multipleSubcategories": {
+                                    "summary": "Multiple subcategories with mixed field requirements",
+                                    "description": "Shows how to handle different subcategories where some have required fields and others don't",
+                                    "value": {
+                                        "car": "60d21b4667d0d8992e610c85",
+                                        "driver": "60d21b4667d0d8992e610c86",
+                                        "subCategories": [ "60d21b4667d0d8992e610c88", "60d21b4667d0d8992e610c90", "60d21b4667d0d8992e610c91" ],
+                                        "description": "Comprehensive service including engine, transmission, and AC maintenance",
+                                        "cost": 350,
+                                        "mechanicCost": 250,
+                                        "customFieldData": [
+                                            {
+                                                "fieldName": "engineMileage",
+                                                "fieldValue": "87500",
+                                                "subcategoryId": "60d21b4667d0d8992e610c88"
+                                            },
+                                            {
+                                                "fieldName": "lastServiceDate",
+                                                "fieldValue": "2024-12-15",
+                                                "subcategoryId": "60d21b4667d0d8992e610c88"
+                                            },
+                                            {
+                                                "fieldName": "transmissionFluidColor",
+                                                "fieldValue": "Dark red, needs replacement",
+                                                "subcategoryId": "60d21b4667d0d8992e610c90"
+                                            },
+                                            {
+                                                "fieldName": "acRefrigerantLevel",
+                                                "fieldValue": "Low",
+                                                "subcategoryId": "60d21b4667d0d8992e610c91"
+                                            }
+                                        ]
+                                    }
+                                }
                             }
                         }
                     }
-                },
-                "responses": {
+                }, "responses": {
                     "201": {
                         "description": "Maintenance record created successfully",
                         "content": {
@@ -991,11 +1066,87 @@
                         }
                     },
                     "400": {
-                        "description": "Bad request",
+                        "description": "Bad request - validation errors for custom fields",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "missingRequiredField": {
+                                        "summary": "Missing required custom field",
+                                        "value": {
+                                            "status": "error",
+                                            "message": "Required custom field 'currentMileage' is missing for subcategory 'Engine Maintenance'"
+                                        }
+                                    },
+                                    "invalidFieldName": {
+                                        "summary": "Invalid field name provided",
+                                        "value": {
+                                            "status": "error",
+                                            "message": "Custom field 'invalidField' does not exist for subcategory 'Engine Maintenance'"
+                                        }
+                                    },
+                                    "missingSubcategoryId": {
+                                        "summary": "Missing subcategory ID in custom field data",
+                                        "value": {
+                                            "status": "error",
+                                            "message": "subcategoryId is required for custom field data"
+                                        }
+                                    },
+                                    "subcategoryNotSelected": {
+                                        "summary": "Custom field for unselected subcategory",
+                                        "value": {
+                                            "status": "error",
+                                            "message": "Cannot provide custom field data for subcategory '60d21b4667d0d8992e610c99' that is not selected in subCategories array"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - missing or invalid token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - insufficient permissions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Resource not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "carNotFound": {
+                                        "summary": "Car not found",
+                                        "value": {
+                                            "status": "error",
+                                            "message": "No car found with id: 60d21b4667d0d8992e610c85"
+                                        }
+                                    },
+                                    "subcategoryNotFound": {
+                                        "summary": "Subcategory not found",
+                                        "value": {
+                                            "status": "error",
+                                            "message": "No subcategory found with id: 60d21b4667d0d8992e610c88"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1784,8 +1935,7 @@
                         }
                     }
                 }
-            }
-        },
+            } },
         "/subcategories/category/{categoryId}": {
             "get": {
                 "summary": "Get all subcategories for a specific category",
@@ -1839,6 +1989,276 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/subcategories/{id}/fields": { "get": {
+                "summary": "Get custom fields for a subcategory",
+                "tags": [ "SubCategories" ],
+                "security": [ { "bearerAuth": [ ] } ],
+                "description": "**Driver Workflow Step 2**: After selecting subcategories, drivers use this endpoint to discover what custom fields need to be filled out.\n\n**Usage for Drivers:**\n1. Call this endpoint for each selected subcategory\n2. Check which fields have `isRequired: true` - these MUST be included in maintenance request\n3. Optional fields (`isRequired: false`) can be included if relevant\n4. Use the `fieldName` and `subcategoryId` when submitting custom field data\n\n**Field Types:** All responses are submitted as strings, but fields may represent:\n- Numbers (mileage, measurements): `\"85000\"`\n- Dates: `\"2024-12-15\"` or `\"December 15, 2024\"`\n- Text descriptions: `\"Good condition, minimal wear\"`\n- Yes/No answers: `\"Yes\"` or `\"No\"`",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The subcategory ID"
+                    }
+                ], "responses": {
+                    "200": {
+                        "description": "Custom fields retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Custom fields retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "subcategoryName": {
+                                                    "type": "string",
+                                                    "example": "Engine Maintenance"
+                                                },
+                                                "customFields": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/CustomField"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "examples": {
+                                    "engineMaintenance": {
+                                        "summary": "Engine maintenance with mileage and condition check",
+                                        "description": "Example response for engine maintenance subcategory with required mileage field and optional condition assessment",
+                                        "value": {
+                                            "status": "success",
+                                            "message": "Custom fields retrieved successfully",
+                                            "data": {
+                                                "subcategoryName": "Engine Maintenance",
+                                                "customFields": [
+                                                    {
+                                                        "_id": "60d21b4667d0d8992e610c90",
+                                                        "fieldName": "current_mileage",
+                                                        "description": "Current vehicle mileage for maintenance tracking",
+                                                        "isRequired": true
+                                                    },
+                                                    {
+                                                        "_id": "60d21b4667d0d8992e610c91",
+                                                        "fieldName": "engine_condition",
+                                                        "description": "General assessment of engine condition (e.g., Good, Fair, Poor)",
+                                                        "isRequired": false
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "tireReplacement": {
+                                        "summary": "Tire replacement with multiple required fields",
+                                        "description": "Example showing tire replacement subcategory with multiple required custom fields",
+                                        "value": {
+                                            "status": "success",
+                                            "message": "Custom fields retrieved successfully",
+                                            "data": {
+                                                "subcategoryName": "Tire Replacement",
+                                                "customFields": [
+                                                    {
+                                                        "_id": "60d21b4667d0d8992e610c92",
+                                                        "fieldName": "tire_position",
+                                                        "description": "Which tire was replaced (Front Left, Front Right, Rear Left, Rear Right, All)",
+                                                        "isRequired": true
+                                                    },
+                                                    {
+                                                        "_id": "60d21b4667d0d8992e610c93",
+                                                        "fieldName": "tire_brand",
+                                                        "description": "Brand and model of the new tire",
+                                                        "isRequired": true
+                                                    },
+                                                    {
+                                                        "_id": "60d21b4667d0d8992e610c94",
+                                                        "fieldName": "old_tire_condition",
+                                                        "description": "Condition of the replaced tire",
+                                                        "isRequired": false
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "noCustomFields": {
+                                        "summary": "Subcategory with no custom fields",
+                                        "description": "Example response when a subcategory has no custom fields defined",
+                                        "value": {
+                                            "status": "success",
+                                            "message": "Custom fields retrieved successfully",
+                                            "data": {
+                                                "subcategoryName": "Basic Inspection",
+                                                "customFields": [ ]
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Subcategory not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "SubCategory not found"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Add custom field to subcategory",
+                "tags": [ "SubCategories" ],
+                "security": [ { "bearerAuth": [ ] } ],
+                "description": "Add a new custom field to collect specific information from drivers",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The subcategory ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CustomFieldInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Custom field added successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Custom field added successfully"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SubCategory"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subcategories/{id}/fields/{fieldId}": {
+            "put": {
+                "summary": "Update custom field",
+                "tags": [ "SubCategories" ],
+                "security": [ { "bearerAuth": [ ] } ],
+                "description": "Update an existing custom field in a subcategory",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The subcategory ID"
+                    },
+                    {
+                        "in": "path",
+                        "name": "fieldId",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The custom field ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CustomFieldUpdateInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Custom field updated successfully"
+                    }
+                }
+            },
+            "delete": {
+                "summary": "Remove custom field",
+                "tags": [ "SubCategories" ],
+                "security": [ { "bearerAuth": [ ] } ],
+                "description": "Remove a custom field from a subcategory",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The subcategory ID"
+                    },
+                    {
+                        "in": "path",
+                        "name": "fieldId",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The custom field ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Custom field removed successfully"
                     }
                 }
             }
@@ -2702,8 +3122,7 @@
                     "car": { "type": "string", "example": "60d21b4667d0d8992e610c85" }
                 },
                 "required": [ "name", "password", "phoneNumber", "nationalId", "licenseNumber", "address" ]
-            },
-            "Maintenance": {
+            }, "Maintenance": {
                 "type": "object",
                 "properties": {
                     "_id": { "type": "string", "example": "60d21b4667d0d8992e610c87" },
@@ -2716,10 +3135,16 @@
                     "description": { "type": "string", "example": "Replace engine air filter" },
                     "cost": { "type": "number", "example": 120 },
                     "mechanicCost": { "type": "number", "example": 80 },
-                    "date": { "type": "string", "format": "date-time" }
+                    "customFieldData": {
+                        "type": "array",
+                        "items": { "$ref": "#/components/schemas/CustomFieldData" },
+                        "description": "Driver's responses to custom fields"
+                    },
+                    "date": { "type": "string", "format": "date-time" },
+                    "createdAt": { "type": "string", "format": "date-time" },
+                    "updatedAt": { "type": "string", "format": "date-time" }
                 }
-            },
-            "MaintenanceInput": {
+            }, "MaintenanceInput": {
                 "type": "object",
                 "properties": {
                     "car": {
@@ -2750,6 +3175,13 @@
                         "type": "number",
                         "example": 80,
                         "description": "Labor cost for the mechanic"
+                    },
+                    "customFieldData": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CustomFieldData"
+                        },
+                        "description": "Driver's responses to admin-defined custom fields"
                     },
                     "date": {
                         "type": "string",
@@ -2806,8 +3238,7 @@
                     }
                 },
                 "required": [ "name" ]
-            },
-            "SubCategory": {
+            }, "SubCategory": {
                 "type": "object",
                 "properties": {
                     "_id": {
@@ -2816,7 +3247,11 @@
                     },
                     "name": {
                         "type": "string",
-                        "example": "Oil Change"
+                        "example": "Engine Maintenance"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Regular engine maintenance and service"
                     },
                     "category": {
                         "oneOf": [
@@ -2829,10 +3264,12 @@
                             }
                         ]
                     },
-                    "cost": {
-                        "type": "number",
-                        "example": 50,
-                        "description": "Standard cost for mechanic service"
+                    "customFields": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CustomField"
+                        },
+                        "description": "Admin-defined fields to collect specific information from drivers"
                     },
                     "createdAt": {
                         "type": "string",
@@ -2849,18 +3286,96 @@
                 "properties": {
                     "name": {
                         "type": "string",
-                        "example": "Oil Change"
+                        "example": "Engine Maintenance"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Regular engine maintenance and service"
                     },
                     "category": {
                         "type": "string",
                         "example": "60d21b4667d0d8992e610c89"
                     },
-                    "description": {
-                        "type": "string",
-                        "example": "Regular oil and filter change"
+                    "customFields": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CustomFieldInput"
+                        },
+                        "description": "Optional custom fields to define at creation"
                     }
                 },
                 "required": [ "name", "description", "category" ]
+            }, "CustomField": {
+                "type": "object",
+                "properties": {
+                    "_id": {
+                        "type": "string",
+                        "example": "60d21b4667d0d8992e610c90"
+                    },
+                    "fieldName": {
+                        "type": "string",
+                        "example": "mileage"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Current vehicle mileage for maintenance tracking"
+                    },
+                    "isRequired": {
+                        "type": "boolean",
+                        "example": true
+                    }
+                }
+            }, "CustomFieldInput": {
+                "type": "object",
+                "properties": {
+                    "fieldName": {
+                        "type": "string",
+                        "example": "mileage"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Current vehicle mileage for maintenance tracking"
+                    },
+                    "isRequired": {
+                        "type": "boolean",
+                        "example": true,
+                        "default": false
+                    }
+                },
+                "required": [ "fieldName", "description" ]
+            }, "CustomFieldUpdateInput": {
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "example": "Updated description of what we need from driver"
+                    },
+                    "isRequired": {
+                        "type": "boolean",
+                        "example": false
+                    }
+                }
+            },
+            "CustomFieldData": {
+                "type": "object",
+                "properties": {
+                    "fieldName": {
+                        "type": "string",
+                        "example": "currentMileage",
+                        "description": "The field name from the subcategory's custom fields"
+                    },
+                    "fieldValue": {
+                        "type": "string",
+                        "example": "85000",
+                        "description": "Driver's response as string (flexible for any input type)"
+                    },
+                    "subcategoryId": {
+                        "type": "string",
+                        "example": "60d21b4667d0d8992e610c88",
+                        "description": "ID of the subcategory this field belongs to"
+                    }
+                },
+                "required": [ "fieldName", "fieldValue", "subcategoryId" ]
             },
             "Error": {
                 "type": "object",

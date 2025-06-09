@@ -1,19 +1,45 @@
 const SubCategory = require("../models/subCategoryModel");
 const Category = require("../models/categoryModel");
 const ApiError = require("../utils/apiError");
+const asyncHandler = require("express-async-handler");
 
-exports.getAllSubCategories = async (req, res) => {
+const validateCustomFields = (customFields) => {
+  if (!Array.isArray(customFields))
+    return { isValid: false, message: "Custom fields must be an array" };
+
+  const fieldNames = customFields.map((field) => field.fieldName);
+  const uniqueFieldNames = [...new Set(fieldNames)];
+
+  if (fieldNames.length !== uniqueFieldNames.length) {
+    return { isValid: false, message: "Field names must be unique" };
+  }
+
+  return { isValid: true };
+};
+
+const checkCategoryExists = async (categoryId) => {
+  if (!categoryId) return null;
+
+  const category = await Category.findById(categoryId);
+  if (!category) {
+    throw new ApiError(`No category found with id: ${categoryId}`, 404);
+  }
+  return category;
+};
+
+exports.getAllSubCategories = asyncHandler(async (req, res) => {
   const subCategories = await SubCategory.find()
     .select("-__v")
     .populate("category", "name");
+
   res.status(200).json({
     status: "success",
     results: subCategories.length,
     data: subCategories,
   });
-};
+});
 
-exports.getSubCategoryById = async (req, res, next) => {
+exports.getSubCategoryById = asyncHandler(async (req, res, next) => {
   const subCategory = await SubCategory.findById(req.params.id).select("-__v");
 
   if (!subCategory) {
@@ -26,9 +52,9 @@ exports.getSubCategoryById = async (req, res, next) => {
     status: "success",
     data: subCategory,
   });
-};
+});
 
-exports.getSubCategoriesByCategoryId = async (req, res, next) => {
+exports.getSubCategoriesByCategoryId = asyncHandler(async (req, res, next) => {
   const category = await Category.findById(req.params.categoryId);
   if (!category) {
     return next(
@@ -45,23 +71,17 @@ exports.getSubCategoriesByCategoryId = async (req, res, next) => {
     results: subCategories.length,
     data: subCategories,
   });
-};
+});
 
-exports.createSubCategory = async (req, res, next) => {
-  let category = null;
+exports.createSubCategory = asyncHandler(async (req, res, next) => {
+  // Check if category exists
+  const category = await checkCategoryExists(req.body.category);
 
-  if (req.body.category) {
-    category = await Category.findById(req.body.category);
-    if (!category) {
-      return next(
-        new ApiError(`No category found with id: ${req.body.category}`, 404)
-      );
-    }
-  }
-
+  // Check for existing subcategory with same name
   const existingSubCategory = await SubCategory.findOne({
     name: req.body.name,
   });
+
   if (existingSubCategory) {
     return next(
       new ApiError(
@@ -71,8 +91,18 @@ exports.createSubCategory = async (req, res, next) => {
     );
   }
 
+  // Validate custom fields if provided
+  if (req.body.customFields) {
+    const validation = validateCustomFields(req.body.customFields);
+    if (!validation.isValid) {
+      return next(new ApiError(validation.message, 400));
+    }
+  }
+
+  // Create subcategory
   const subCategory = await SubCategory.create(req.body);
 
+  // Update category's subcategories array
   if (category) {
     await Category.findByIdAndUpdate(category._id, {
       $push: { subCategories: subCategory._id },
@@ -86,9 +116,9 @@ exports.createSubCategory = async (req, res, next) => {
     message: "Subcategory created successfully",
     data,
   });
-};
+});
 
-exports.updateSubCategory = async (req, res, next) => {
+exports.updateSubCategory = asyncHandler(async (req, res, next) => {
   if (req.body.category) {
     const category = await Category.findById(req.body.category);
     if (!category) {
@@ -130,9 +160,9 @@ exports.updateSubCategory = async (req, res, next) => {
     message: "Subcategory updated successfully",
     data: updatedSubCategory,
   });
-};
+});
 
-exports.deleteSubCategory = async (req, res, next) => {
+exports.deleteSubCategory = asyncHandler(async (req, res, next) => {
   const subCategory = await SubCategory.findById(req.params.id);
   if (!subCategory) {
     return next(
@@ -152,4 +182,127 @@ exports.deleteSubCategory = async (req, res, next) => {
     status: "success",
     message: "Subcategory deleted successfully",
   });
-};
+});
+
+exports.addCustomField = asyncHandler(async (req, res, next) => {
+  const { fieldName, description, isRequired } = req.body;
+
+  if (!fieldName || !description) {
+    return next(new ApiError("Field name and description are required", 400));
+  }
+
+  const subCategory = await SubCategory.findById(req.params.id);
+  if (!subCategory) {
+    return next(
+      new ApiError(`No subcategory found with id: ${req.params.id}`, 404)
+    );
+  }
+
+  // Check if field name already exists
+  const existingField = subCategory.customFields?.find(
+    (field) => field.fieldName === fieldName
+  );
+  if (existingField) {
+    return next(new ApiError(`Field "${fieldName}" already exists`, 400));
+  }
+
+  const newField = {
+    fieldName,
+    description,
+    isRequired: isRequired || false,
+  };
+
+  if (!subCategory.customFields) {
+    subCategory.customFields = [];
+  }
+
+  subCategory.customFields.push(newField);
+  await subCategory.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Custom field added successfully",
+    data: subCategory,
+  });
+});
+
+exports.updateCustomField = asyncHandler(async (req, res, next) => {
+  const { fieldId } = req.params;
+  const { description, isRequired } = req.body;
+
+  const subCategory = await SubCategory.findById(req.params.id);
+  if (!subCategory) {
+    return next(
+      new ApiError(`No subcategory found with id: ${req.params.id}`, 404)
+    );
+  }
+
+  const fieldIndex = subCategory.customFields?.findIndex(
+    (field) => field._id.toString() === fieldId
+  );
+  if (fieldIndex === -1 || fieldIndex === undefined) {
+    return next(new ApiError("Custom field not found", 404));
+  }
+
+  // Update field properties
+  if (description)
+    subCategory.customFields[fieldIndex].description = description;
+  if (typeof isRequired === "boolean")
+    subCategory.customFields[fieldIndex].isRequired = isRequired;
+
+  await subCategory.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Custom field updated successfully",
+    data: subCategory,
+  });
+});
+
+exports.removeCustomField = asyncHandler(async (req, res, next) => {
+  const { fieldId } = req.params;
+
+  const subCategory = await SubCategory.findById(req.params.id);
+  if (!subCategory) {
+    return next(
+      new ApiError(`No subcategory found with id: ${req.params.id}`, 404)
+    );
+  }
+
+  if (!subCategory.customFields) {
+    return next(new ApiError("No custom fields found", 404));
+  }
+
+  subCategory.customFields = subCategory.customFields.filter(
+    (field) => field._id.toString() !== fieldId
+  );
+
+  await subCategory.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Custom field removed successfully",
+    data: subCategory,
+  });
+});
+
+exports.getCustomFields = asyncHandler(async (req, res, next) => {
+  const subCategory = await SubCategory.findById(req.params.id).select(
+    "name customFields"
+  );
+
+  if (!subCategory) {
+    return next(
+      new ApiError(`No subcategory found with id: ${req.params.id}`, 404)
+    );
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Custom fields retrieved successfully",
+    data: {
+      subcategoryName: subCategory.name,
+      customFields: subCategory.customFields || [],
+    },
+  });
+});

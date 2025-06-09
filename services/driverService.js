@@ -30,19 +30,15 @@ const validateUniqueFields = async (data, driverId = null) => {
 };
 
 exports.createDriver = asyncHandler(async (req, res, next) => {
-  try {
-    await validateUniqueFields(req.body);
+  await validateUniqueFields(req.body);
 
-    const driver = await Driver.create(req.body);
+  const driver = await Driver.create(req.body);
 
-    res.status(201).json({
-      status: "success",
-      message: "Driver created successfully",
-      data: driver,
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(201).json({
+    status: "success",
+    message: "Driver created successfully",
+    data: driver,
+  });
 });
 
 exports.getAllDrivers = asyncHandler(async (req, res) => {
@@ -121,46 +117,42 @@ exports.getDriverByPhoneNumber = asyncHandler(async (req, res, next) => {
 });
 
 exports.updateDriver = asyncHandler(async (req, res, next) => {
-  try {
-    await validateUniqueFields(req.body, req.params.id);
+  await validateUniqueFields(req.body, req.params.id);
 
-    if (req.body.car === null) {
-      const currentDriver = await Driver.findById(req.params.id);
-      if (currentDriver?.car) {
-        await Car.findByIdAndUpdate(currentDriver.car, {
-          $unset: { driver: 1 },
-        });
-      }
-    } else if (req.body.car) {
-      await Car.findByIdAndUpdate(req.body.car, { driver: req.params.id });
-    }
-
-    const driver = await Driver.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    })
-      .select(
-        "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
-      )
-      .populate({
-        path: "car",
-        select:
-          "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt drivers",
+  if (req.body.car === null) {
+    const currentDriver = await Driver.findById(req.params.id);
+    if (currentDriver?.car) {
+      await Car.findByIdAndUpdate(currentDriver.car, {
+        $unset: { driver: 1 },
       });
-
-    if (!driver) {
-      return next(
-        new ApiError(`No driver found with this id: ${req.params.id}`, 404)
-      );
     }
-
-    res.status(200).json({
-      status: "success",
-      message: "Driver updated successfully",
-      data: driver,
-    });
-  } catch (error) {
-    next(error);
+  } else if (req.body.car) {
+    await Car.findByIdAndUpdate(req.body.car, { driver: req.params.id });
   }
+
+  const driver = await Driver.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+  })
+    .select(
+      "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
+    )
+    .populate({
+      path: "car",
+      select:
+        "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt drivers",
+    });
+
+  if (!driver) {
+    return next(
+      new ApiError(`No driver found with this id: ${req.params.id}`, 404)
+    );
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Driver updated successfully",
+    data: driver,
+  });
 });
 
 exports.deleteDriver = asyncHandler(async (req, res, next) => {
@@ -219,63 +211,55 @@ exports.getDriverMaintenanceRecords = asyncHandler(async (req, res, next) => {
 });
 
 exports.getDriverMe = asyncHandler(async (req, res, next) => {
-  try {
-    if (!req.driver) {
-      return next(
-        new ApiError("Access denied. This endpoint is only for drivers.", 403)
-      );
-    }
-
-    const driver = await Driver.findById(req.driver._id)
-      .select(
-        "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
-      )
-      .populate({
-        path: "car",
-        select:
-          "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt drivers",
-      });
-
-    const maintenanceHistory = await Maintenance.find({
-      driver: req.driver._id,
-    })
-      .select("-__v")
-      .populate([
-        {
-          path: "car",
-          select: "brand model plateNumber year color status",
-        },
-        {
-          path: "subCategories",
-          select: "name description",
-          populate: {
-            path: "category",
-            select: "name",
-          },
-        },
-      ])
-      .sort({ date: -1 });
-
-    const driverObj = driver.toObject();
-    driverObj.maintenanceHistory = maintenanceHistory;
-
-    res.status(200).json({
-      status: "success",
-      data: driverObj,
-    });
-  } catch (error) {
-    next(error);
+  if (!req.driver) {
+    return next(
+      new ApiError("Access denied. This endpoint is only for drivers.", 403)
+    );
   }
+
+  const driver = await Driver.findById(req.driver._id)
+    .select(
+      "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
+    )
+    .populate({
+      path: "car",
+      select:
+        "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt drivers",
+    });
+
+  const maintenanceHistory = await Maintenance.find({
+    driver: req.driver._id,
+  })
+    .select("-__v")
+    .populate([
+      {
+        path: "car",
+        select: "brand model plateNumber year color status",
+      },
+      {
+        path: "subCategories",
+        select: "name description",
+        populate: {
+          path: "category",
+          select: "name",
+        },
+      },
+    ])
+    .sort({ date: -1 });
+
+  const driverObj = driver.toObject();
+  driverObj.maintenanceHistory = maintenanceHistory;
+
+  res.status(200).json({
+    status: "success",
+    data: driverObj,
+  });
 });
 
 exports.getTotalDrivers = asyncHandler(async (req, res, next) => {
-  try {
-    const total = await Driver.countDocuments();
-    res.status(200).json({
-      status: "success",
-      totalDrivers: total,
-    });
-  } catch (error) {
-    next(error);
-  }
+  const total = await Driver.countDocuments();
+  res.status(200).json({
+    status: "success",
+    totalDrivers: total,
+  });
 });

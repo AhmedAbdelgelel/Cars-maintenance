@@ -1,8 +1,9 @@
 const Category = require("../models/categoryModel");
 const ApiError = require("../utils/apiError");
 const ApiFeatures = require("../utils/apiFeatures");
+const asyncHandler = require("express-async-handler");
 
-exports.getAllCategories = async (req, res) => {
+exports.getAllCategories = asyncHandler(async (req, res) => {
   const apiFeatures = new ApiFeatures(Category.find(), req.query, [
     "name",
   ]).search();
@@ -18,9 +19,9 @@ exports.getAllCategories = async (req, res) => {
     results: categories.length,
     data: categories,
   });
-};
+});
 
-exports.getCategoryById = async (req, res, next) => {
+exports.getCategoryById = asyncHandler(async (req, res, next) => {
   const category = await Category.findById(req.params.id)
     .populate({
       path: "subCategories",
@@ -38,9 +39,9 @@ exports.getCategoryById = async (req, res, next) => {
     status: "success",
     data: category,
   });
-};
+});
 
-exports.createCategory = async (req, res, next) => {
+exports.createCategory = asyncHandler(async (req, res, next) => {
   const existingCategory = await Category.findOne({
     name: req.body.name,
   }).select("-__v");
@@ -49,7 +50,6 @@ exports.createCategory = async (req, res, next) => {
       new ApiError(`Category with name "${req.body.name}" already exists`, 400)
     );
   }
-
   const category = await Category.create(req.body);
 
   res.status(201).json({
@@ -57,9 +57,9 @@ exports.createCategory = async (req, res, next) => {
     message: "Category created successfully",
     data: category,
   });
-};
+});
 
-exports.updateCategory = async (req, res, next) => {
+exports.updateCategory = asyncHandler(async (req, res, next) => {
   const category = await Category.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
   })
@@ -80,9 +80,9 @@ exports.updateCategory = async (req, res, next) => {
     message: "Category updated successfully",
     data: category,
   });
-};
+});
 
-exports.deleteCategory = async (req, res, next) => {
+exports.deleteCategory = asyncHandler(async (req, res, next) => {
   const category = await Category.findById(req.params.id);
 
   if (!category) {
@@ -106,4 +106,4 @@ exports.deleteCategory = async (req, res, next) => {
     status: "success",
     message: "Category deleted successfully",
   });
-};
+});
