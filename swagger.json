@@ -33,6 +33,10 @@
             "description": "Maintenance record endpoints"
         },
         {
+            "name": "Maintenance Requests",
+            "description": "Maintenance request endpoints"
+        },
+        {
             "name": "Categories",
             "description": "Maintenance category endpoints"
         },
@@ -51,6 +55,14 @@
         {
             "name": "Admin",
             "description": "Admin authentication and management endpoints"
+        },
+        {
+            "name": "Receivers",
+            "description": "Receiver management and maintenance request handling endpoints"
+        },
+        {
+            "name": "Notifications",
+            "description": "User notification management endpoints"
         }
     ],
     "paths": {
@@ -2977,6 +2989,814 @@
                     }
                 }
             }
+        },
+        "/maintenance-requests": {
+            "get": {
+                "summary": "Get maintenance requests",
+                "tags": [ "Maintenance Requests" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Get all maintenance requests. Accessible by admin and drivers.",
+                "responses": {
+                    "200": {
+                        "description": "A list of maintenance requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "results": {
+                                            "type": "number",
+                                            "example": 10
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/MaintenanceRequest"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Create a new maintenance request",
+                "tags": [ "Maintenance Requests" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Create a new maintenance request. Accessible by drivers only.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MaintenanceRequestInput"
+                            },
+                            "example": {
+                                "car": "60d21b4667d0d8992e610c85",
+                                "subCategories": [ "60d21b4667d0d8992e610c88" ],
+                                "description": "Oil change and tire rotation needed",
+                                "customFieldData": [
+                                    {
+                                        "fieldName": "currentMileage",
+                                        "fieldValue": "25000",
+                                        "subcategoryId": "60d21b4667d0d8992e610c88"
+                                    },
+                                    {
+                                        "fieldName": "lastServiceDate",
+                                        "fieldValue": "2024-01-15",
+                                        "subcategoryId": "60d21b4667d0d8992e610c88"
+                                    },
+                                    {
+                                        "fieldName": "engineCondition",
+                                        "fieldValue": "Good condition, no issues reported",
+                                        "subcategoryId": "60d21b4667d0d8992e610c88"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Maintenance request created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Maintenance request created successfully"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/MaintenanceRequest"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/maintenance-requests/my": {
+            "get": {
+                "summary": "Get my maintenance requests",
+                "tags": [ "Maintenance Requests" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Get maintenance requests for the authenticated driver.",
+                "responses": {
+                    "200": {
+                        "description": "Driver's maintenance requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "results": {
+                                            "type": "number",
+                                            "example": 5
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/MaintenanceRequest"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/maintenance-requests/{id}": {
+            "get": {
+                "summary": "Get a maintenance request by ID",
+                "tags": [ "Maintenance Requests" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The maintenance request ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Maintenance request details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/MaintenanceRequest"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/maintenance-requests/{requestId}/upload-receipt": {
+            "patch": {
+                "summary": "Upload receipt for maintenance request",
+                "tags": [ "Maintenance Requests" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "requestId",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The maintenance request ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "receiptImage": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "description": "Receipt image file"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Receipt uploaded successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Receipt uploaded successfully"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/maintenance-requests/{requestId}/complete": {
+            "patch": {
+                "summary": "Complete a maintenance request",
+                "tags": [ "Maintenance Requests" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Mark a maintenance request as completed. Admin only.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "requestId",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The maintenance request ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Maintenance request completed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Maintenance request completed successfully"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/my": {
+            "get": {
+                "summary": "Get my notifications",
+                "tags": [ "Notifications" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Get all notifications for the authenticated user.",
+                "responses": {
+                    "200": {
+                        "description": "User's notifications",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "results": {
+                                            "type": "number",
+                                            "example": 12
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Notification"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/stats": {
+            "get": {
+                "summary": "Get notification statistics",
+                "tags": [ "Notifications" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Get notification statistics for the authenticated user.",
+                "responses": {
+                    "200": {
+                        "description": "Notification statistics",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "totalNotifications": {
+                                                    "type": "number",
+                                                    "example": 25
+                                                },
+                                                "unreadNotifications": {
+                                                    "type": "number",
+                                                    "example": 5
+                                                },
+                                                "readNotifications": {
+                                                    "type": "number",
+                                                    "example": 20
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/mark-all-read": {
+            "patch": {
+                "summary": "Mark all notifications as read",
+                "tags": [ "Notifications" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Mark all notifications as read for the authenticated user.",
+                "responses": {
+                    "200": {
+                        "description": "All notifications marked as read",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "All notifications marked as read"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/{notificationId}/read": {
+            "patch": {
+                "summary": "Mark a notification as read",
+                "tags": [ "Notifications" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "notificationId",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The notification ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notification marked as read",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Notification marked as read"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/{notificationId}": {
+            "delete": {
+                "summary": "Delete a notification",
+                "tags": [ "Notifications" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "notificationId",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The notification ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notification deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Notification deleted successfully"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/receivers": {
+            "get": {
+                "summary": "Get all receivers",
+                "tags": [ "Receivers" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Get all receivers. Admin access required.",
+                "responses": {
+                    "200": {
+                        "description": "A list of receivers",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "results": {
+                                            "type": "number",
+                                            "example": 5
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Receiver"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Create a new receiver",
+                "tags": [ "Receivers" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Create a new receiver. Admin access required.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReceiverInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Receiver created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Receiver created successfully"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Receiver"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/receivers/me": {
+            "get": {
+                "summary": "Get current receiver profile",
+                "tags": [ "Receivers" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Get the authenticated receiver's profile.",
+                "responses": {
+                    "200": {
+                        "description": "Receiver profile retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Receiver"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/receivers/pending-requests": {
+            "get": {
+                "summary": "Get pending maintenance requests",
+                "tags": [ "Receivers" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Get all pending maintenance requests for the receiver.",
+                "responses": {
+                    "200": {
+                        "description": "Pending maintenance requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "results": {
+                                            "type": "number",
+                                            "example": 8
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/MaintenanceRequest"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/receivers/accepted-requests": {
+            "get": {
+                "summary": "Get accepted maintenance requests",
+                "tags": [ "Receivers" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "description": "Get all accepted maintenance requests for the receiver.",
+                "responses": {
+                    "200": {
+                        "description": "Accepted maintenance requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "results": {
+                                            "type": "number",
+                                            "example": 3
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/MaintenanceRequest"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/receivers/requests/{requestId}/accept": {
+            "patch": {
+                "summary": "Accept a maintenance request",
+                "tags": [ "Receivers" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "requestId",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The maintenance request ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Maintenance request accepted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Maintenance request accepted successfully"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/receivers/requests/{requestId}/reject": {
+            "patch": {
+                "summary": "Reject a maintenance request",
+                "tags": [ "Receivers" ],
+                "security": [
+                    {
+                        "bearerAuth": [ ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "requestId",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true,
+                        "description": "The maintenance request ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "rejectionMessage": {
+                                        "type": "string",
+                                        "example": "Not enough capacity for this maintenance"
+                                    }
+                                },
+                                "required": [ "rejectionMessage" ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Maintenance request rejected successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Maintenance request rejected successfully"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -3579,6 +4399,241 @@
                         "example": true
                     }
                 }
+            },
+            "MaintenanceRequest": {
+                "type": "object",
+                "properties": {
+                    "_id": {
+                        "type": "string",
+                        "example": "60d21b4667d0d8992e610c85"
+                    },
+                    "driver": {
+                        "$ref": "#/components/schemas/Driver"
+                    },
+                    "car": {
+                        "$ref": "#/components/schemas/Car"
+                    },
+                    "receiver": {
+                        "$ref": "#/components/schemas/Receiver"
+                    },
+                    "subCategories": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SubCategory"
+                        }
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Oil change and tire rotation needed"
+                    },
+                    "customFieldData": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "fieldName": {
+                                    "type": "string",
+                                    "example": "currentMileage"
+                                },
+                                "fieldValue": {
+                                    "type": "string",
+                                    "example": "25000"
+                                },
+                                "subcategoryId": {
+                                    "type": "string",
+                                    "example": "60d21b4667d0d8992e610c88"
+                                }
+                            }
+                        }
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [ "open", "accepted", "rejected", "underReview", "completed" ],
+                        "example": "open"
+                    },
+                    "rejectionMessage": {
+                        "type": "string",
+                        "example": "Not enough capacity for this maintenance"
+                    },
+                    "receiptImage": {
+                        "type": "string",
+                        "example": "uploads/receipt_12345.jpg"
+                    },
+                    "cost": {
+                        "type": "number",
+                        "example": 150
+                    },
+                    "mechanicCost": {
+                        "type": "number",
+                        "example": 100
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-01-15T08:30:00Z"
+                    }
+                }
+            },
+            "MaintenanceRequestInput": {
+                "type": "object",
+                "properties": {
+                    "car": {
+                        "type": "string",
+                        "example": "60d21b4667d0d8992e610c85"
+                    },
+                    "subCategories": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [ "60d21b4667d0d8992e610c88", "60d21b4667d0d8992e610c89" ]
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Oil change and tire rotation needed"
+                    },
+                    "customFieldData": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "fieldName": {
+                                    "type": "string",
+                                    "example": "currentMileage"
+                                },
+                                "fieldValue": {
+                                    "type": "string",
+                                    "example": "25000"
+                                },
+                                "subcategoryId": {
+                                    "type": "string",
+                                    "example": "60d21b4667d0d8992e610c88"
+                                }
+                            }
+                        }
+                    }
+                },
+                "required": [ "car", "subCategories", "description" ]
+            },
+            "Notification": {
+                "type": "object",
+                "properties": {
+                    "_id": {
+                        "type": "string",
+                        "example": "60d21b4667d0d8992e610c85"
+                    },
+                    "recipient": {
+                        "$ref": "#/components/schemas/Driver"
+                    },
+                    "sender": {
+                        "$ref": "#/components/schemas/Driver"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [ "maintenance_request", "request_accepted", "request_rejected", "maintenance_completed" ],
+                        "example": "maintenance_request"
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "New Maintenance Request"
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "A new maintenance request has been submitted for your car."
+                    },
+                    "isRead": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "relatedRequest": {
+                        "type": "string",
+                        "example": "60d21b4667d0d8992e610c90"
+                    },
+                    "relatedMaintenance": {
+                        "type": "string",
+                        "example": "60d21b4667d0d8992e610c91"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-01-15T08:30:00Z"
+                    }
+                }
+            },
+            "Receiver": {
+                "type": "object",
+                "properties": {
+                    "_id": {
+                        "type": "string",
+                        "example": "60d21b4667d0d8992e610c85"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Ahmed's Auto Shop"
+                    },
+                    "email": {
+                        "type": "string",
+                        "example": "ahmed@autoshop.com"
+                    },
+                    "phoneNumber": {
+                        "type": "string",
+                        "example": "+1234567890"
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "123 Main St, City, State"
+                    },
+                    "specialization": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [ "Engine Repair", "Oil Change", "Tire Service" ]
+                    },
+                    "isActive": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-01-15T08:30:00Z"
+                    }
+                }
+            },
+            "ReceiverInput": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "Ahmed's Auto Shop"
+                    },
+                    "email": {
+                        "type": "string",
+                        "example": "ahmed@autoshop.com"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "password123"
+                    },
+                    "phoneNumber": {
+                        "type": "string",
+                        "example": "+1234567890"
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "123 Main St, City, State"
+                    },
+                    "specialization": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [ "Engine Repair", "Oil Change", "Tire Service" ]
+                    }
+                },
+                "required": [ "name", "email", "password", "phoneNumber" ]
             }
         }
     }

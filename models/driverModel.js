@@ -30,7 +30,7 @@ const driverSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ["driver", "admin"],
+    enum: ["driver", "admin", "receiver"],
     default: "driver",
   },
   maintenanceHistory: [

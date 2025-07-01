@@ -8,9 +8,15 @@ exports.register = asyncHandler(async (req, res, next) => {
     req.headers["user-agent"]?.toLowerCase().includes("mobile") ||
     req.headers["is-mobile-app"] === "true";
 
-  if (isMobileRequest && req.body.role === "admin") {
+  if (
+    isMobileRequest &&
+    (req.body.role === "admin" || req.body.role === "receiver")
+  ) {
     return next(
-      new ApiError("Admin registration is not allowed from mobile devices", 403)
+      new ApiError(
+        "Admin and receiver registration is not allowed from mobile devices",
+        403
+      )
     );
   }
 
@@ -23,7 +29,7 @@ exports.register = asyncHandler(async (req, res, next) => {
   if (exists) {
     return next(
       new ApiError(
-        "Driver with this phone, national ID, or license already exists",
+        "User with this phone, national ID, or license already exists",
         400
       )
     );
@@ -38,6 +44,7 @@ exports.register = asyncHandler(async (req, res, next) => {
     nationalId,
     licenseNumber,
     address,
+    role: req.body.role || "driver",
   });
 
   const token = generateToken(newDriver._id, newDriver.role || "driver");
@@ -81,5 +88,6 @@ exports.login = asyncHandler(async (req, res, next) => {
 exports.logout = async (req, res) => {
   res
     .status(200)
+    .clearCookie("jwt")
     .json({ status: "success", message: "Logged out successfully" });
 };
