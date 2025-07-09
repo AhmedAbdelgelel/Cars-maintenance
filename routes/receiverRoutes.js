@@ -8,6 +8,7 @@ const {
   getReceiverMe,
   createReceiver,
   getAllReceivers,
+  loginReceiver,
 } = require("../services/receiverService");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
@@ -37,6 +38,7 @@ router.patch(
   restrictTo("receiver"),
   rejectMaintenanceRequest
 );
+router.post("/login", loginReceiver);
 
 // Admin endpoints for receiver management
 router.post("/", protect, restrictTo("admin"), createReceiver);

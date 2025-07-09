@@ -4,7 +4,7 @@ const asyncHandler = require("express-async-handler");
 
 // Get user's notifications
 exports.getMyNotifications = asyncHandler(async (req, res, next) => {
-  const userId = req.driver?._id || req.admin?._id;
+  const userId = req.driver?._id || req.admin?._id || req.receiver?._id;
 
   if (!userId) {
     return next(new ApiError("Authentication required", 401));
@@ -24,7 +24,7 @@ exports.getMyNotifications = asyncHandler(async (req, res, next) => {
 
 // Mark notification as read
 exports.markNotificationAsRead = asyncHandler(async (req, res, next) => {
-  const userId = req.driver?._id || req.admin?._id;
+  const userId = req.driver?._id || req.admin?._id || req.receiver?._id;
   const { notificationId } = req.params;
 
   const notification = await Notification.findOneAndUpdate(
@@ -39,14 +39,13 @@ exports.markNotificationAsRead = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     status: "success",
-    message: "Notification marked as read",
     data: notification,
   });
 });
 
 // Mark all notifications as read
 exports.markAllNotificationsAsRead = asyncHandler(async (req, res, next) => {
-  const userId = req.driver?._id || req.admin?._id;
+  const userId = req.driver?._id || req.admin?._id || req.receiver?._id;
 
   await Notification.updateMany(
     { recipient: userId, isRead: false },
@@ -61,7 +60,7 @@ exports.markAllNotificationsAsRead = asyncHandler(async (req, res, next) => {
 
 // Delete notification
 exports.deleteNotification = asyncHandler(async (req, res, next) => {
-  const userId = req.driver?._id || req.admin?._id;
+  const userId = req.driver?._id || req.admin?._id || req.receiver?._id;
   const { notificationId } = req.params;
 
   const notification = await Notification.findOneAndDelete({
@@ -81,7 +80,7 @@ exports.deleteNotification = asyncHandler(async (req, res, next) => {
 
 // Get notification stats
 exports.getNotificationStats = asyncHandler(async (req, res, next) => {
-  const userId = req.driver?._id || req.admin?._id;
+  const userId = req.driver?._id || req.admin?._id || req.receiver?._id;
 
   const stats = await Notification.aggregate([
     { $match: { recipient: userId } },

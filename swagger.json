@@ -3580,6 +3580,58 @@
                 }
             }
         },
+        "/receivers/login": {
+            "post": {
+                "summary": "Log in a receiver",
+                "tags": [ "Receivers" ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": { "$ref": "#/components/schemas/LoginInput" }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Receiver logged in successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": { "type": "string", "example": "success" },
+                                        "token": { "type": "string", "example": "eyJhbGciOi..." },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "receiver": { "$ref": "#/components/schemas/Receiver" }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - missing phone number or password",
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/Error" }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - incorrect phone number or password",
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/Error" }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/receivers/me": {
             "get": {
                 "summary": "Get current receiver profile",
@@ -4515,6 +4567,7 @@
                 },
                 "required": [ "car", "subCategories", "description" ]
             },
+
             "Notification": {
                 "type": "object",
                 "properties": {
@@ -4579,20 +4632,10 @@
                         "type": "string",
                         "example": "+1234567890"
                     },
-                    "address": {
+                    "password": {
                         "type": "string",
-                        "example": "123 Main St, City, State"
-                    },
-                    "specialization": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        },
-                        "example": [ "Engine Repair", "Oil Change", "Tire Service" ]
-                    },
-                    "isActive": {
-                        "type": "boolean",
-                        "example": true
+                        "format": "password",
+                        "example": "password123"
                     },
                     "createdAt": {
                         "type": "string",
@@ -4620,18 +4663,8 @@
                     "phoneNumber": {
                         "type": "string",
                         "example": "+1234567890"
-                    },
-                    "address": {
-                        "type": "string",
-                        "example": "123 Main St, City, State"
-                    },
-                    "specialization": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        },
-                        "example": [ "Engine Repair", "Oil Change", "Tire Service" ]
                     }
+
                 },
                 "required": [ "name", "email", "password", "phoneNumber" ]
             }

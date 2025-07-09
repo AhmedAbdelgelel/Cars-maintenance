@@ -1,9 +1,10 @@
-const Driver = require("../models/driverModel");
+const Receiver = require("../models/receiverModel");
 const MaintenanceRequest = require("../models/maintenanceRequestModel");
 const Notification = require("../models/notificationModel");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("express-async-handler");
-
+const generateToken = require("../utils/generateToken");
+const bcrypt = require("bcryptjs");
 // Receiver gets pending maintenance requests (status: open)
 exports.getPendingRequests = asyncHandler(async (req, res, next) => {
   const requests = await MaintenanceRequest.find({ status: "open" })
@@ -22,7 +23,11 @@ exports.getPendingRequests = asyncHandler(async (req, res, next) => {
 // Receiver accepts a maintenance request (changes status from open to accepted)
 exports.acceptMaintenanceRequest = asyncHandler(async (req, res, next) => {
   const { requestId } = req.params;
-  const receiver = req.driver;
+  const receiver = req.receiver;
+
+  if (!receiver) {
+    return next(new ApiError("No receiver found in request context", 401));
+  }
 
   const maintenanceRequest = await MaintenanceRequest.findOne({
     _id: requestId,
@@ -59,7 +64,11 @@ exports.acceptMaintenanceRequest = asyncHandler(async (req, res, next) => {
 exports.rejectMaintenanceRequest = asyncHandler(async (req, res, next) => {
   const { requestId } = req.params;
   const { rejectionMessage } = req.body;
-  const receiver = req.driver;
+  const receiver = req.receiver;
+
+  if (!receiver) {
+    return next(new ApiError("No receiver found in request context", 401));
+  }
 
   if (!rejectionMessage) {
     return next(new ApiError("Rejection message is required", 400));
@@ -99,7 +108,11 @@ exports.rejectMaintenanceRequest = asyncHandler(async (req, res, next) => {
 
 // Receiver gets their accepted requests
 exports.getAcceptedRequests = asyncHandler(async (req, res, next) => {
-  const receiver = req.driver;
+  const receiver = req.receiver;
+
+  if (!receiver) {
+    return next(new ApiError("No receiver found in request context", 401));
+  }
 
   const requests = await MaintenanceRequest.find({
     receiver: receiver._id,
@@ -119,14 +132,10 @@ exports.getAcceptedRequests = asyncHandler(async (req, res, next) => {
 
 // Receiver gets their profile
 exports.getReceiverMe = asyncHandler(async (req, res, next) => {
-  const receiver = req.driver;
-
-  if (receiver.role !== "receiver") {
-    return next(
-      new ApiError("Access denied. This endpoint is only for receivers.", 403)
-    );
+  const receiver = req.receiver;
+  if (!receiver) {
+    return next(new ApiError("No receiver found in request context", 401));
   }
-
   res.status(200).json({
     status: "success",
     data: receiver,
@@ -135,25 +144,30 @@ exports.getReceiverMe = asyncHandler(async (req, res, next) => {
 
 // Admin creates a receiver
 exports.createReceiver = asyncHandler(async (req, res, next) => {
-  const existingReceiver = await Driver.findOne({
-    $or: [
-      { phoneNumber: req.body.phoneNumber },
-      { nationalId: req.body.nationalId },
-      { licenseNumber: req.body.licenseNumber },
-    ],
-  });
-
-  if (existingReceiver) {
+  const { name, email, phoneNumber, password } = req.body;
+  if (!name || !email || !phoneNumber || !password) {
     return next(
       new ApiError(
-        "Receiver with this phone, national ID, or license already exists",
+        "All fields (name, email, phoneNumber, password) are required",
         400
       )
     );
   }
-
-  const receiver = await Driver.create({ ...req.body, role: "receiver" });
-
+  const existingReceiver = await Receiver.findOne({
+    $or: [{ phoneNumber }, { email }],
+  });
+  if (existingReceiver) {
+    return next(
+      new ApiError("Receiver with this phone or email already exists", 400)
+    );
+  }
+  const hashedPassword = await bcrypt.hash(password, 12);
+  const receiver = await Receiver.create({
+    name,
+    email,
+    phoneNumber,
+    password: hashedPassword,
+  });
   res.status(201).json({
     status: "success",
     message: "Receiver created successfully",
@@ -163,13 +177,35 @@ exports.createReceiver = asyncHandler(async (req, res, next) => {
 
 // Admin gets all receivers
 exports.getAllReceivers = asyncHandler(async (req, res) => {
-  const receivers = await Driver.find({ role: "receiver" }).select(
-    "_id name phoneNumber nationalId licenseNumber address createdAt updatedAt"
+  const receivers = await Receiver.find().select(
+    "_id name email phoneNumber createdAt"
   );
-
   res.status(200).json({
     status: "success",
     results: receivers.length,
     data: receivers,
+  });
+});
+
+// Receiver login
+exports.loginReceiver = asyncHandler(async (req, res, next) => {
+  const { phoneNumber, password } = req.body;
+  if (!phoneNumber || !password) {
+    return next(new ApiError("Please provide phone number and password", 400));
+  }
+  const receiver = await Receiver.findOne({ phoneNumber });
+  if (!receiver) {
+    return next(new ApiError("Receiver not found", 401));
+  }
+
+  const isMatch = await bcrypt.compare(password, receiver.password);
+  if (!isMatch) {
+    return next(new ApiError("Incorrect password", 401));
+  }
+  const token = generateToken(receiver._id, "receiver");
+  res.status(200).json({
+    status: "success",
+    token: token,
+    receiver: receiver,
   });
 });

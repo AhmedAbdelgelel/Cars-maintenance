@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const Driver = require("../models/driverModel");
 const Admin = require("../models/adminModel");
 const ApiError = require("../utils/apiError");
+const Receiver = require("../models/receiverModel");
 exports.protect = async (req, res, next) => {
   try {
     let token;
@@ -17,24 +18,42 @@ exports.protect = async (req, res, next) => {
       );
     }
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    let currentUser = await Driver.findById(decoded.id).populate({
-      path: "car",
-      select:
-        "brand model plateNumber year color status meterReading lastMeterUpdate drivers",
-    });
-    if (!currentUser) {
-      currentUser = await Admin.findById(decoded.id);
-      if (currentUser) {
-        req.admin = currentUser;
-        return next();
-      } else {
+    let currentUser;
+    if (decoded.role === "receiver") {
+      currentUser = await Receiver.findById(decoded.id);
+      if (!currentUser) {
         return next(
           new ApiError("The user belonging to this token no longer exists", 401)
         );
       }
+      req.receiver = currentUser;
+      return next();
+    } else if (decoded.role === "driver") {
+      currentUser = await Driver.findById(decoded.id).populate({
+        path: "car",
+        select:
+          "brand model plateNumber year color status meterReading lastMeterUpdate drivers",
+      });
+      if (!currentUser) {
+        return next(
+          new ApiError("The user belonging to this token no longer exists", 401)
+        );
+      }
+      req.driver = currentUser;
+      return next();
+    } else if (decoded.role === "admin") {
+      currentUser = await Admin.findById(decoded.id);
+      if (!currentUser) {
+        return next(
+          new ApiError("The user belonging to this token no longer exists", 401)
+        );
+      }
+      req.admin = currentUser;
+      return next();
     }
-    req.driver = currentUser;
-    next();
+    return next(
+      new ApiError("The user belonging to this token no longer exists", 401)
+    );
   } catch (error) {
     if (error.name === "JsonWebTokenError") {
       return next(new ApiError("Invalid token. Please log in again", 401));
@@ -47,10 +66,19 @@ exports.protect = async (req, res, next) => {
     next(error);
   }
 };
+
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {
     if (req.admin) {
       if (roles.includes("admin")) {
+        return next();
+      }
+      return next(
+        new ApiError("You do not have permission to perform this action", 403)
+      );
+    }
+    if (req.receiver) {
+      if (roles.includes("receiver")) {
         return next();
       }
       return next(
