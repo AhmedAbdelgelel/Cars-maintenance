@@ -19,13 +19,18 @@ exports.createMaintenanceRequest = asyncHandler(async (req, res, next) => {
     return next(new ApiError("Car not found", 404));
   }
 
+  // Accept mechanicCost and cost from request body (optional)
+  const { subCategories, description, customFieldData, mechanicCost, cost } = req.body;
+
   // Create the maintenance request with status "open"
   const maintenanceRequest = await MaintenanceRequest.create({
     driver: driver._id,
     car: driver.car,
-    subCategories: req.body.subCategories,
-    description: req.body.description,
-    customFieldData: req.body.customFieldData || [],
+    subCategories,
+    description,
+    customFieldData: customFieldData || [],
+    mechanicCost: mechanicCost || 0,
+    cost: cost || 0,
   });
 
   // Notify all receivers about the new request
