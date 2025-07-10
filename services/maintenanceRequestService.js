@@ -20,7 +20,8 @@ exports.createMaintenanceRequest = asyncHandler(async (req, res, next) => {
   }
 
   // Accept mechanicCost and cost from request body (optional)
-  const { subCategories, description, customFieldData, mechanicCost, cost } = req.body;
+  const { subCategories, description, customFieldData, mechanicCost, cost } =
+    req.body;
 
   // Create the maintenance request with status "open"
   const maintenanceRequest = await MaintenanceRequest.create({
@@ -58,6 +59,7 @@ exports.createMaintenanceRequest = asyncHandler(async (req, res, next) => {
     status: "success",
     message: "Maintenance request created successfully",
     data: populatedRequest,
+    customFieldData: maintenanceRequest.customFieldData || [],
   });
 });
 
