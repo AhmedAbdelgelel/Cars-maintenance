@@ -129,7 +129,7 @@ exports.getMaintenanceRequests = asyncHandler(async (req, res, next) => {
   }
 
   const requests = await MaintenanceRequest.find(filter)
-    .populate("driver", "name phoneNumber role")
+    .populate("driver", "name phoneNumber")
     .populate("car", "brand model plateNumber")
     .populate("subCategories", "name description")
     .populate("receiver", "name phoneNumber")
