@@ -9,6 +9,7 @@ const {
   getAllMaintenanceRequests,
   completeMaintenanceRequest,
   getMaintenanceRequestById,
+  getUnderReviewMaintenanceRequests, // <-- add new endpoint
 } = require("../services/maintenanceRequestService");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
@@ -30,6 +31,14 @@ router.patch(
   protect,
   restrictTo("admin"),
   completeMaintenanceRequest
+);
+
+// Admin endpoint to get under review requests
+router.get(
+  "/under-review",
+  protect,
+  restrictTo("admin"),
+  getUnderReviewMaintenanceRequests
 );
 
 // General endpoints

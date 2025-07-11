@@ -112,25 +112,24 @@ exports.uploadReceipt = asyncHandler(async (req, res, next) => {
   });
 });
 
-// Get maintenance requests - drivers get their own, admins get all
+// Get maintenance requests - drivers get their own, admins get all or filtered
 exports.getMaintenanceRequests = asyncHandler(async (req, res, next) => {
-  const user = req.driver;
+  // Defensive: ensure req.driver and req.admin are not undefined before accessing .role
   let filter = {};
 
-  // If the user is a driver, only show their own requests
-  if (user.role === "driver") {
-    filter.driver = user._id;
-  }
-  // If admin, get all requests (no filter)
-  // If receiver, this endpoint shouldn't be used (they have their own endpoints)
-
-  // Apply status filter if provided
-  if (req.query.status) {
-    filter.status = req.query.status;
+  if (req.driver && req.driver.role === "driver") {
+    filter.driver = req.driver._id;
+  } else if (req.admin && req.admin.role === "admin") {
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+  } else {
+    // If neither driver nor admin is present, do not access .role and return 401
+    return next(new ApiError("Authentication required", 401));
   }
 
   const requests = await MaintenanceRequest.find(filter)
-    .populate("driver", "name phoneNumber")
+    .populate("driver", "name phoneNumber role")
     .populate("car", "brand model plateNumber")
     .populate("subCategories", "name description")
     .populate("receiver", "name phoneNumber")
@@ -142,6 +141,27 @@ exports.getMaintenanceRequests = asyncHandler(async (req, res, next) => {
     data: requests,
   });
 });
+
+// Get under review maintenance requests (admin only)
+exports.getUnderReviewMaintenanceRequests = asyncHandler(
+  async (req, res, next) => {
+    if (!req.admin || req.admin.role !== "admin") {
+      return next(new ApiError("Admin access required", 403));
+    }
+    const requests = await MaintenanceRequest.find({ status: "underReview" })
+      .populate("driver", "name phoneNumber")
+      .populate("car", "brand model plateNumber")
+      .populate("subCategories", "name description")
+      .populate("receiver", "name phoneNumber")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      status: "success",
+      results: requests.length,
+      data: requests,
+    });
+  }
+);
 
 // Legacy function - kept for backward compatibility if needed
 exports.getMyMaintenanceRequests = asyncHandler(async (req, res, next) => {
