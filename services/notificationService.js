@@ -94,9 +94,14 @@ exports.getNotificationStats = asyncHandler(async (req, res, next) => {
   ]);
 
   const result = stats[0] || { total: 0, unread: 0 };
+  const response = {
+    totalNotifications: result.total,
+    unreadNotifications: result.unread,
+    readNotifications: result.total - result.unread,
+  };
 
   res.status(200).json({
     status: "success",
-    data: result,
+    data: response,
   });
 });
