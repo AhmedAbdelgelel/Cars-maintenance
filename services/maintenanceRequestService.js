@@ -132,7 +132,6 @@ exports.getMaintenanceRequests = asyncHandler(async (req, res, next) => {
     .populate("driver", "name phoneNumber")
     .populate("car", "brand model plateNumber")
     .populate("subCategories", "name description")
-    .populate("receiver", "name phoneNumber")
     .sort({ createdAt: -1 });
 
   res.status(200).json({
