@@ -1,7 +1,6 @@
 const MaintenanceRequest = require("../models/maintenanceRequestModel");
 const Car = require("../models/carsModel");
 const Driver = require("../models/driverModel");
-const SubCategory = require("../models/subCategoryModel");
 const Notification = require("../models/notificationModel");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("express-async-handler");
@@ -84,12 +83,17 @@ exports.uploadReceipt = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Change status to underReview after receipt upload
-  maintenanceRequest.receiptImage = req.file.path;
-  maintenanceRequest.cost = req.body.cost;
-  maintenanceRequest.mechanicCost = req.body.mechanicCost;
-  maintenanceRequest.status = "underReview";
-  await maintenanceRequest.save();
+  // Update only receiptImage and status using findByIdAndUpdate
+  const updatedRequest = await MaintenanceRequest.findByIdAndUpdate(
+    requestId,
+    {
+      $set: {
+        receiptImage: req.file.path,
+        status: "underReview",
+      },
+    },
+    { new: true }
+  );
 
   // Notify admin
   const admins = await Driver.find({ role: "admin" });
@@ -100,15 +104,34 @@ exports.uploadReceipt = asyncHandler(async (req, res, next) => {
       type: "maintenance_request",
       title: "Receipt Uploaded",
       message: `${driver.name} uploaded receipt for maintenance request`,
-      relatedRequest: maintenanceRequest._id,
+      relatedRequest: updatedRequest._id,
     }));
     await Notification.insertMany(notifications);
   }
 
+  // Get the populated request after status change
+  const populatedRequest = await MaintenanceRequest.findById(updatedRequest._id)
+    .populate("driver", "name phoneNumber")
+    .populate("car", "brand model plateNumber")
+    .populate("subCategories", "name description");
+
   res.status(200).json({
     status: "success",
     message: "Receipt uploaded successfully, request is now under review",
-    data: maintenanceRequest,
+    data: {
+      _id: populatedRequest._id,
+      driver: populatedRequest.driver,
+      car: populatedRequest.car,
+      subCategories: populatedRequest.subCategories,
+      description: populatedRequest.description,
+      customFieldData: populatedRequest.customFieldData,
+      status: populatedRequest.status,
+      receiptImage: populatedRequest.receiptImage,
+      cost: populatedRequest.cost,
+      mechanicCost: populatedRequest.mechanicCost,
+      createdAt: populatedRequest.createdAt,
+      updatedAt: populatedRequest.updatedAt,
+    },
   });
 });
 
@@ -151,13 +174,28 @@ exports.getUnderReviewMaintenanceRequests = asyncHandler(
       .populate("driver", "name phoneNumber")
       .populate("car", "brand model plateNumber")
       .populate("subCategories", "name description")
-      .populate("receiver", "name phoneNumber")
       .sort({ createdAt: -1 });
+
+    // Format response to ensure populated fields
+    const formattedRequests = requests.map((req) => ({
+      _id: req._id,
+      driver: req.driver,
+      car: req.car,
+      subCategories: req.subCategories,
+      description: req.description,
+      customFieldData: req.customFieldData,
+      status: req.status,
+      receiptImage: req.receiptImage,
+      cost: req.cost,
+      mechanicCost: req.mechanicCost,
+      createdAt: req.createdAt,
+      updatedAt: req.updatedAt,
+    }));
 
     res.status(200).json({
       status: "success",
-      results: requests.length,
-      data: requests,
+      results: formattedRequests.length,
+      data: formattedRequests,
     });
   }
 );
@@ -169,7 +207,6 @@ exports.getMyMaintenanceRequests = asyncHandler(async (req, res, next) => {
   const requests = await MaintenanceRequest.find({ driver: driver._id })
     .populate("car", "brand model plateNumber")
     .populate("subCategories", "name description")
-    .populate("receiver", "name phoneNumber")
     .sort({ createdAt: -1 });
 
   res.status(200).json({
@@ -185,7 +222,6 @@ exports.getAllMaintenanceRequests = asyncHandler(async (req, res, next) => {
     .populate("driver", "name phoneNumber")
     .populate("car", "brand model plateNumber")
     .populate("subCategories", "name description")
-    .populate("receiver", "name phoneNumber")
     .sort({ createdAt: -1 });
 
   res.status(200).json({
@@ -211,11 +247,13 @@ exports.completeMaintenanceRequest = asyncHandler(async (req, res, next) => {
     return next(new ApiError("Request must be under review to complete", 400));
   }
 
-  // Validate that receipt and costs are provided
+  // Validate that receipt and costs are provided (allow 0 as valid value)
   if (
     !maintenanceRequest.receiptImage ||
-    !maintenanceRequest.cost ||
-    !maintenanceRequest.mechanicCost
+    maintenanceRequest.cost === undefined ||
+    maintenanceRequest.cost === null ||
+    maintenanceRequest.mechanicCost === undefined ||
+    maintenanceRequest.mechanicCost === null
   ) {
     return next(
       new ApiError(
@@ -271,9 +309,7 @@ exports.getMaintenanceRequestById = asyncHandler(async (req, res, next) => {
   const request = await MaintenanceRequest.findById(req.params.id)
     .populate("driver", "name phoneNumber")
     .populate("car", "brand model plateNumber")
-    .populate("subCategories", "name description")
-    .populate("receiver", "name phoneNumber");
-
+    .populate("subCategories", "name description");
   if (!request) {
     return next(new ApiError("Maintenance request not found", 404));
   }
