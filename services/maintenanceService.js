@@ -139,11 +139,16 @@ exports.getMaintenanceByCarId = asyncHandler(async (req, res, next) => {
 });
 
 exports.createMaintenanceRecord = asyncHandler(async (req, res, next) => {
+  // Accountants and admins can add maintenance records
+  if (!["admin", "accountant"].includes(req.user.role)) {
+    return next(
+      new ApiError("Only admin or accountant can add maintenance records", 403)
+    );
+  }
   const car = await Car.findById(req.body.car);
   if (!car) {
     return next(new ApiError(`No car found with id: ${req.body.car}`, 404));
   }
-
   // Validate custom fields if provided
   if (req.body.subCategories && req.body.subCategories.length > 0) {
     await validateCustomFields(
@@ -152,12 +157,10 @@ exports.createMaintenanceRecord = asyncHandler(async (req, res, next) => {
       next
     );
   }
-
   const record = await Maintenance.create(req.body);
   await Car.findByIdAndUpdate(req.body.car, {
     $push: { maintenanceHistory: record._id },
   });
-
   const populatedRecord = await Maintenance.findById(record._id)
     .select("-__v")
     .populate({
@@ -181,7 +184,6 @@ exports.createMaintenanceRecord = asyncHandler(async (req, res, next) => {
       path: "customFieldData.subcategoryId",
       select: "name",
     });
-
   res.status(201).json({
     status: "success",
     message: "Maintenance record created successfully",
@@ -313,8 +315,16 @@ exports.updateMaintenanceRecord = asyncHandler(async (req, res, next) => {
 });
 
 exports.deleteMaintenanceRecord = asyncHandler(async (req, res, next) => {
+  // Accountants and admins can delete maintenance records
+  if (!["admin", "accountant"].includes(req.user.role)) {
+    return next(
+      new ApiError(
+        "Only admin or accountant can delete maintenance records",
+        403
+      )
+    );
+  }
   const record = await Maintenance.findById(req.params.id);
-
   if (!record) {
     return next(
       new ApiError(
@@ -323,14 +333,12 @@ exports.deleteMaintenanceRecord = asyncHandler(async (req, res, next) => {
       )
     );
   }
-
   await Promise.all([
     Car.findByIdAndUpdate(record.car, {
       $pull: { maintenanceHistory: req.params.id },
     }),
     Maintenance.findByIdAndDelete(req.params.id),
   ]);
-
   res.status(200).json({
     status: "success",
     message: "Maintenance record deleted successfully",

@@ -42,16 +42,22 @@ exports.getCategoryById = asyncHandler(async (req, res, next) => {
 });
 
 exports.createCategory = asyncHandler(async (req, res, next) => {
+  // Only admin can add categories
+  if (req.user.role !== "admin") {
+    return next(new ApiError("Only admin can add categories", 403));
+  }
   const existingCategory = await Category.findOne({
     name: req.body.name,
   }).select("-__v");
   if (existingCategory) {
     return next(
-      new ApiError(`Category with name "${req.body.name}" already exists`, 400)
+      new ApiError(
+        `Category with name \"${req.body.name}\" already exists`,
+        400
+      )
     );
   }
   const category = await Category.create(req.body);
-
   res.status(201).json({
     status: "success",
     message: "Category created successfully",

@@ -74,23 +74,26 @@ exports.getSubCategoriesByCategoryId = asyncHandler(async (req, res, next) => {
 });
 
 exports.createSubCategory = asyncHandler(async (req, res, next) => {
+  // Accountants and admins can add subcategories
+  if (!["admin", "accountant"].includes(req.user.role)) {
+    return next(
+      new ApiError("Only admin or accountant can add subcategories", 403)
+    );
+  }
   // Check if category exists
   const category = await checkCategoryExists(req.body.category);
-
   // Check for existing subcategory with same name
   const existingSubCategory = await SubCategory.findOne({
     name: req.body.name,
   });
-
   if (existingSubCategory) {
     return next(
       new ApiError(
-        `Subcategory with name "${req.body.name}" already exists`,
+        `Subcategory with name \"${req.body.name}\" already exists`,
         400
       )
     );
   }
-
   // Validate custom fields if provided
   if (req.body.customFields) {
     const validation = validateCustomFields(req.body.customFields);
@@ -98,19 +101,15 @@ exports.createSubCategory = asyncHandler(async (req, res, next) => {
       return next(new ApiError(validation.message, 400));
     }
   }
-
   // Create subcategory
   const subCategory = await SubCategory.create(req.body);
-
   // Update category's subcategories array
   if (category) {
     await Category.findByIdAndUpdate(category._id, {
       $push: { subCategories: subCategory._id },
     });
   }
-
   const data = await SubCategory.findById(subCategory._id).select("-__v");
-
   res.status(201).json({
     status: "success",
     message: "Subcategory created successfully",

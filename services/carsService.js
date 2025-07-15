@@ -1,3 +1,36 @@
+// Get meter readings for all cars between two dates
+exports.getMeterReadings = asyncHandler(async (req, res) => {
+  const { startDate, endDate } = req.query;
+  if (!startDate || !endDate) {
+    return res
+      .status(400)
+      .json({ status: "fail", message: "startDate and endDate are required" });
+  }
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const cars = await Car.find({
+    meterReadingsHistory: {
+      $elemMatch: {
+        date: { $gte: start, $lte: end },
+      },
+    },
+  }).select("plateNumber brand model meterReadingsHistory");
+
+  // Filter readings within date range for each car
+  const result = cars.map((car) => ({
+    plateNumber: car.plateNumber,
+    brand: car.brand,
+    model: car.model,
+    readings: car.meterReadingsHistory.filter(
+      (r) => r.date >= start && r.date <= end
+    ),
+  }));
+
+  res.status(200).json({
+    status: "success",
+    data: result,
+  });
+});
 const Car = require("../models/carsModel");
 const Driver = require("../models/driverModel");
 const Maintenance = require("../models/maintenanceModel");
@@ -37,10 +70,15 @@ exports.getAllCars = asyncHandler(async (req, res) => {
       ],
     });
 
+  // Add oilChangeKM to each car
+  const carsWithOilChange = cars.map((car) => ({
+    ...car.toObject(),
+    oilChangeKM: car.meterReading - car.lastOCRCheck,
+  }));
   res.status(200).json({
     status: "success",
-    results: cars.length,
-    data: cars,
+    results: carsWithOilChange.length,
+    data: carsWithOilChange,
   });
 });
 
@@ -85,15 +123,21 @@ exports.getCarById = asyncHandler(async (req, res, next) => {
     );
   }
 
+  // Add oilChangeKM to car response
+  const carObj = car.toObject();
+  carObj.oilChangeKM = carObj.meterReading - carObj.lastOCRCheck;
   res.status(200).json({
     status: "success",
-    data: car,
+    data: carObj,
   });
 });
 
 exports.createCar = asyncHandler(async (req, res, next) => {
+  // Only admin can create cars
+  if (req.user.role !== "admin") {
+    return next(new ApiError("Only admin can add cars", 403));
+  }
   const existingCar = await Car.findOne({ plateNumber: req.body.plateNumber });
-
   if (existingCar) {
     return next(
       new ApiError(
@@ -102,16 +146,13 @@ exports.createCar = asyncHandler(async (req, res, next) => {
       )
     );
   }
-
   const car = await Car.create(req.body);
-
   if (req.body.driver) {
     await Promise.all([
       Driver.findByIdAndUpdate(req.body.driver, { car: car._id }),
       Car.findByIdAndUpdate(car._id, { driver: req.body.driver }),
     ]);
   }
-
   res.status(201).json({
     status: "success",
     message: "Car created successfully",
@@ -121,7 +162,8 @@ exports.createCar = asyncHandler(async (req, res, next) => {
 
 exports.updateCar = asyncHandler(async (req, res, next) => {
   try {
-    if (req.body.status && !req.admin) {
+    // Only admin can change car status
+    if (req.body.status && req.user.role !== "admin") {
       return next(
         new ApiError("Only administrators can change car status", 403)
       );
@@ -180,19 +222,20 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
 });
 
 exports.deleteCar = asyncHandler(async (req, res, next) => {
+  // Only admin can delete cars
+  if (req.user.role !== "admin") {
+    return next(new ApiError("Only admin can delete cars", 403));
+  }
   const car = await Car.findById(req.params.id);
-
   if (!car) {
     return next(
       new ApiError(`No car found with this id: ${req.params.id}`, 404)
     );
   }
-
   await Promise.all([
     Maintenance.deleteMany({ car: req.params.id }),
     Car.findByIdAndDelete(req.params.id),
   ]);
-
   res.status(200).json({
     status: "success",
     message: "Car deleted successfully",

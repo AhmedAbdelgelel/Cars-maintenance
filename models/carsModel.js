@@ -35,9 +35,29 @@ const carsSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  lastOCRCheck: {
+    type: Number,
+    default: 0,
+  },
+  oilChangeReminderKM: {
+    type: Number,
+    default: 0,
+  },
+  examinationDate: {
+    type: Date,
+  },
+  insuranceDate: {
+    type: Date,
+  },
   lastMeterUpdate: {
     type: Date,
   },
+  meterReadingsHistory: [
+    {
+      reading: { type: Number, required: true },
+      date: { type: Date, required: true },
+    },
+  ],
   maintenanceHistory: [
     {
       type: mongoose.Schema.Types.ObjectId,
