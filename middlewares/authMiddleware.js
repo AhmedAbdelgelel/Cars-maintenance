@@ -27,6 +27,10 @@ exports.protect = async (req, res, next) => {
           new ApiError("The user belonging to this token no longer exists", 401)
         );
       }
+      if (currentUser.isActive === false) {
+        return next(new ApiError("Your account has been deactivated", 401));
+      }
+      req.user = currentUser;
       req.receiver = currentUser;
       return next();
     } else if (decoded.role === "driver") {
@@ -40,6 +44,10 @@ exports.protect = async (req, res, next) => {
           new ApiError("The user belonging to this token no longer exists", 401)
         );
       }
+      if (currentUser.isActive === false) {
+        return next(new ApiError("Your account has been deactivated", 401));
+      }
+      req.user = currentUser;
       req.driver = currentUser;
       return next();
     } else if (decoded.role === "admin") {
@@ -49,6 +57,10 @@ exports.protect = async (req, res, next) => {
           new ApiError("The user belonging to this token no longer exists", 401)
         );
       }
+      if (currentUser.isActive === false) {
+        return next(new ApiError("Your account has been deactivated", 401));
+      }
+      req.user = currentUser;
       req.admin = currentUser;
       return next();
     } else if (decoded.role === "accountant") {
@@ -58,12 +70,17 @@ exports.protect = async (req, res, next) => {
           new ApiError("The user belonging to this token no longer exists", 401)
         );
       }
+      if (currentUser.isActive === false) {
+        return next(new ApiError("Your account has been deactivated", 401));
+      }
+      req.user = currentUser;
       req.accountant = currentUser;
       return next();
+    } else {
+      return next(
+        new ApiError("The user belonging to this token no longer exists", 401)
+      );
     }
-    return next(
-      new ApiError("The user belonging to this token no longer exists", 401)
-    );
   } catch (error) {
     if (error.name === "JsonWebTokenError") {
       return next(new ApiError("Invalid token. Please log in again", 401));
@@ -79,40 +96,33 @@ exports.protect = async (req, res, next) => {
 
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {
+    // Get the user's role from the request object
+    let userRole = null;
+
     if (req.admin) {
-      if (roles.includes(req.admin.role)) {
-        return next();
-      }
+      userRole = req.admin.role || "admin";
+    } else if (req.accountant) {
+      userRole = req.accountant.role || "accountant";
+    } else if (req.driver) {
+      userRole = req.driver.role || "driver";
+    } else if (req.receiver) {
+      userRole = "receiver";
+    } else if (req.user) {
+      userRole = req.user.role;
+    }
+
+    if (!userRole) {
       return next(
         new ApiError("You do not have permission to perform this action", 403)
       );
     }
-    if (req.accountant) {
-      if (roles.includes("accountant")) {
-        return next();
-      }
-      return next(
-        new ApiError("You do not have permission to perform this action", 403)
-      );
+
+    if (roles.includes(userRole)) {
+      return next();
     }
-    if (req.receiver) {
-      if (roles.includes("receiver")) {
-        return next();
-      }
-      return next(
-        new ApiError("You do not have permission to perform this action", 403)
-      );
-    }
-    if (!req.driver || !req.driver.role) {
-      return next(
-        new ApiError("You do not have permission to perform this action", 403)
-      );
-    }
-    if (!roles.includes(req.driver.role)) {
-      return next(
-        new ApiError("You do not have permission to perform this action", 403)
-      );
-    }
-    next();
+
+    return next(
+      new ApiError("You do not have permission to perform this action", 403)
+    );
   };
 };

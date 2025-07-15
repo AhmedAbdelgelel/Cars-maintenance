@@ -1,4 +1,6 @@
 const Driver = require("../models/driverModel");
+const Admin = require("../models/adminModel");
+const Accountant = require("../models/accountantModel");
 const ApiError = require("../utils/apiError");
 const generateToken = require("../utils/generateToken");
 const asyncHandler = require("express-async-handler");
@@ -8,20 +10,65 @@ exports.register = asyncHandler(async (req, res, next) => {
     req.headers["user-agent"]?.toLowerCase().includes("mobile") ||
     req.headers["is-mobile-app"] === "true";
 
-  if (
-    isMobileRequest &&
-    (req.body.role === "admin" || req.body.role === "receiver")
-  ) {
-    return next(
-      new ApiError(
-        "Admin and receiver registration is not allowed from mobile devices",
-        403
-      )
-    );
+  const {
+    name,
+    password,
+    phoneNumber,
+    nationalId,
+    licenseNumber,
+    address,
+    role,
+  } = req.body;
+
+  if (role === "admin") {
+    if (isMobileRequest) {
+      return next(
+        new ApiError(
+          "Admin registration is not allowed from mobile devices",
+          403
+        )
+      );
+    }
+    const exists = await Admin.exists({ phoneNumber });
+    if (exists) {
+      return next(
+        new ApiError("Admin with this phone number already exists", 400)
+      );
+    }
+    const newAdmin = await Admin.create({
+      name,
+      password,
+      phoneNumber,
+      role: "admin",
+    });
+    const token = generateToken(newAdmin._id, "admin");
+    return res.status(201).json({ status: "success", token });
   }
 
-  const { name, password, phoneNumber, nationalId, licenseNumber, address } =
-    req.body;
+  if (role === "accountant") {
+    if (isMobileRequest) {
+      return next(
+        new ApiError(
+          "Accountant registration is not allowed from mobile devices",
+          403
+        )
+      );
+    }
+    const exists = await Accountant.exists({ phoneNumber });
+    if (exists) {
+      return next(
+        new ApiError("Accountant with this phone number already exists", 400)
+      );
+    }
+    const newAccountant = await Accountant.create({
+      name,
+      password,
+      phoneNumber,
+      role: "accountant",
+    });
+    const token = generateToken(newAccountant._id, "accountant");
+    return res.status(201).json({ status: "success", token });
+  }
 
   const exists = await Driver.exists({
     $or: [{ phoneNumber }, { nationalId }, { licenseNumber }],
@@ -34,9 +81,6 @@ exports.register = asyncHandler(async (req, res, next) => {
       )
     );
   }
-
-  if (isMobileRequest) req.body.role = "driver";
-
   const newDriver = await Driver.create({
     name,
     password,
@@ -44,45 +88,56 @@ exports.register = asyncHandler(async (req, res, next) => {
     nationalId,
     licenseNumber,
     address,
-    role: req.body.role || "driver",
+    role: "driver",
   });
-
-  const token = generateToken(newDriver._id, newDriver.role || "driver");
-
-  res.status(201).json({
-    status: "success",
-    token,
-  });
+  const token = generateToken(newDriver._id, "driver");
+  res.status(201).json({ status: "success", token });
 });
 
 exports.login = asyncHandler(async (req, res, next) => {
-  const { phoneNumber } = req.body;
+  const { phoneNumber, role } = req.body;
 
   if (!phoneNumber) {
     return next(new ApiError("Please provide phone number", 400));
   }
 
-  const driver = await Driver.findOne({ phoneNumber })
-    .select(
-      "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
-    )
-    .populate({
-      path: "car",
-      select:
-        "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt drivers",
-    });
-
-  if (!driver) {
-    return next(new ApiError("Incorrect phone number", 401));
+  let user, token;
+  if (role === "admin") {
+    user = await Admin.findOne({ phoneNumber });
+    if (!user) {
+      return next(new ApiError("Incorrect phone number for admin", 401));
+    }
+    token = generateToken(user._id, "admin");
+    return res
+      .status(200)
+      .json({ status: "success", token, user, role: "admin" });
+  } else if (role === "accountant") {
+    user = await Accountant.findOne({ phoneNumber });
+    if (!user) {
+      return next(new ApiError("Incorrect phone number for accountant", 401));
+    }
+    token = generateToken(user._id, "accountant");
+    return res
+      .status(200)
+      .json({ status: "success", token, user, role: "accountant" });
+  } else {
+    user = await Driver.findOne({ phoneNumber })
+      .select(
+        "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
+      )
+      .populate({
+        path: "car",
+        select:
+          "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt drivers",
+      });
+    if (!user) {
+      return next(new ApiError("Incorrect phone number for driver", 401));
+    }
+    token = generateToken(user._id, "driver");
+    return res
+      .status(200)
+      .json({ status: "success", token, user, role: "driver" });
   }
-
-  const token = generateToken(driver._id, driver.role || "driver");
-
-  res.status(200).json({
-    status: "success",
-    token,
-    driver,
-  });
 });
 
 exports.logout = async (req, res) => {

@@ -11,13 +11,11 @@ const {
 } = require("../services/carsService");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
-router.route("/total").get(protect, restrictTo("admin"), getTotalCarsNumber);
 router
   .route("/total")
   .get(protect, restrictTo("admin", "accountant"), getTotalCarsNumber);
 
 // Endpoint to get meter readings by date range
-router.get("/meter-readings", protect, restrictTo("admin"), getMeterReadings);
 router.get(
   "/meter-readings",
   protect,
@@ -27,18 +25,9 @@ router.get(
 
 router
   .route("/")
-  .get(protect, restrictTo("admin"), getAllCars)
-  .post(protect, restrictTo("admin"), createCar);
-router
-  .route("/")
   .get(protect, restrictTo("admin", "accountant"), getAllCars)
   .post(protect, restrictTo("admin"), createCar);
 
-router
-  .route("/:id")
-  .get(protect, restrictTo("admin"), getCarById)
-  .put(protect, restrictTo("admin"), updateCar)
-  .delete(protect, restrictTo("admin"), deleteCar);
 router
   .route("/:id")
   .get(protect, restrictTo("admin", "accountant"), getCarById)

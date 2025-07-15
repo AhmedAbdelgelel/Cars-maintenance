@@ -137,7 +137,7 @@ exports.uploadReceipt = asyncHandler(async (req, res, next) => {
 
 // Get maintenance requests - drivers get their own, admins get all or filtered
 exports.getMaintenanceRequests = asyncHandler(async (req, res, next) => {
-  // Defensive: ensure req.driver and req.admin are not undefined before accessing .role
+  // Defensive: ensure req.driver, req.admin, and req.accountant are not undefined before accessing .role
   let filter = {};
 
   if (req.driver && req.driver.role === "driver") {
@@ -146,8 +146,12 @@ exports.getMaintenanceRequests = asyncHandler(async (req, res, next) => {
     if (req.query.status) {
       filter.status = req.query.status;
     }
+  } else if (req.accountant && req.accountant.role === "accountant") {
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
   } else {
-    // If neither driver nor admin is present, do not access .role and return 401
+    // If neither driver, admin, nor accountant is present, do not access .role and return 401
     return next(new ApiError("Authentication required", 401));
   }
   // License number filter
@@ -186,8 +190,8 @@ exports.getMaintenanceRequests = asyncHandler(async (req, res, next) => {
 // Get under review maintenance requests (admin only)
 exports.getUnderReviewMaintenanceRequests = asyncHandler(
   async (req, res, next) => {
-    if (!req.admin || req.admin.role !== "admin") {
-      return next(new ApiError("Admin access required", 403));
+    if (!((req.admin && req.admin.role === "admin") || (req.accountant && req.accountant.role === "accountant"))) {
+      return next(new ApiError("Admin or Accountant access required", 403));
     }
     const requests = await MaintenanceRequest.find({ status: "underReview" })
       .populate("driver", "name phoneNumber")

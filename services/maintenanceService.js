@@ -140,7 +140,11 @@ exports.getMaintenanceByCarId = asyncHandler(async (req, res, next) => {
 
 exports.createMaintenanceRecord = asyncHandler(async (req, res, next) => {
   // Accountants and admins can add maintenance records
-  if (!["admin", "accountant"].includes(req.user.role)) {
+  const userRole =
+    req.user?.role ||
+    (req.admin && req.admin.role) ||
+    (req.accountant && req.accountant.role);
+  if (!["admin", "accountant"].includes(userRole)) {
     return next(
       new ApiError("Only admin or accountant can add maintenance records", 403)
     );

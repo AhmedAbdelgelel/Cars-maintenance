@@ -25,7 +25,7 @@ router.patch(
 );
 
 // Driver and Admin endpoints
-router.get("/", protect, restrictTo("admin", "driver"), getMaintenanceRequests);
+router.get("/", protect, restrictTo("admin", "driver", "accountant"), getMaintenanceRequests);
 router.patch(
   "/:requestId/complete",
   protect,
@@ -33,11 +33,11 @@ router.patch(
   completeMaintenanceRequest
 );
 
-// Admin endpoint to get under review requests
+// Admin and Accountant endpoint to get under review requests
 router.get(
   "/under-review",
   protect,
-  restrictTo("admin"),
+  restrictTo("admin", "accountant"),
   getUnderReviewMaintenanceRequests
 );
 
@@ -45,7 +45,7 @@ router.get(
 router.get(
   "/:id",
   protect,
-  restrictTo("admin", "driver", "receiver"),
+  restrictTo("admin", "driver", "receiver", "accountant"),
   getMaintenanceRequestById
 );
 
