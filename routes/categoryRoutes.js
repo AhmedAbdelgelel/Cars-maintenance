@@ -10,11 +10,11 @@ const {
 } = require("../services/categoryService");
 router
   .route("/")
-  .get(protect, restrictTo("admin", "driver"), getAllCategories)
+  .get(protect, restrictTo("admin", "driver", "accountant"), getAllCategories)
   .post(protect, restrictTo("admin"), createCategory);
 router
   .route("/:id")
-  .get(protect, restrictTo("admin", "driver"), getCategoryById)
+  .get(protect, restrictTo("admin", "driver", "accountant"), getCategoryById)
   .put(protect, restrictTo("admin"), updateCategory)
   .delete(protect, restrictTo("admin"), deleteCategory);
 module.exports = router;

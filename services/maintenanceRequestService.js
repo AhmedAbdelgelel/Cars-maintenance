@@ -150,6 +150,25 @@ exports.getMaintenanceRequests = asyncHandler(async (req, res, next) => {
     // If neither driver nor admin is present, do not access .role and return 401
     return next(new ApiError("Authentication required", 401));
   }
+  // License number filter
+  if (req.query.licenseNumber) {
+    const driver = await Driver.findOne({
+      licenseNumber: req.query.licenseNumber,
+    });
+    if (driver) filter.driver = driver._id;
+    else filter.driver = null;
+  }
+  // Status filter
+  if (req.query.status) {
+    filter.status = req.query.status;
+  }
+  // Date filter
+  if (req.query.startDate && req.query.endDate) {
+    filter.createdAt = {
+      $gte: new Date(req.query.startDate),
+      $lte: new Date(req.query.endDate),
+    };
+  }
 
   const requests = await MaintenanceRequest.find(filter)
     .populate("driver", "name phoneNumber")

@@ -6,32 +6,15 @@ const asyncHandler = require("express-async-handler");
 const ApiFeatures = require("../utils/apiFeatures");
 
 exports.getMeterReadings = asyncHandler(async (req, res) => {
-  const { startDate, endDate } = req.query;
-  if (!startDate || !endDate) {
-    return res
-      .status(400)
-      .json({ status: "fail", message: "startDate and endDate are required" });
-  }
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const cars = await Car.find({
-    meterReadingsHistory: {
-      $elemMatch: {
-        date: { $gte: start, $lte: end },
-      },
-    },
-  }).select("plateNumber brand model meterReadingsHistory");
-
-  // Filter readings within date range for each car
+  const cars = await Car.find().select(
+    "plateNumber brand model meterReadingsHistory"
+  );
   const result = cars.map((car) => ({
     plateNumber: car.plateNumber,
     brand: car.brand,
     model: car.model,
-    readings: car.meterReadingsHistory.filter(
-      (r) => r.date >= start && r.date <= end
-    ),
+    readings: car.meterReadingsHistory,
   }));
-
   res.status(200).json({
     status: "success",
     data: result,
