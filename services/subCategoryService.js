@@ -3,6 +3,7 @@ const Category = require("../models/categoryModel");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("express-async-handler");
 const ApiFeatures = require("../utils/apiFeatures");
+
 const validateCustomFields = (customFields) => {
   if (!Array.isArray(customFields))
     return { isValid: false, message: "Custom fields must be an array" };
@@ -78,7 +79,8 @@ exports.getSubCategoriesByCategoryId = asyncHandler(async (req, res, next) => {
 
 exports.createSubCategory = asyncHandler(async (req, res, next) => {
   // Accountants and admins can add subcategories
-  if (!["admin", "accountant"].includes(req.user.role)) {
+  const userRole = req.user?.role || req.accountant?.role;
+  if (!userRole || !["admin", "accountant"].includes(userRole)) {
     return next(
       new ApiError("Only admin or accountant can add subcategories", 403)
     );

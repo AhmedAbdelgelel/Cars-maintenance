@@ -1,4 +1,5 @@
 const Receiver = require("../models/receiverModel");
+const Accountant = require("../models/accountantModel");
 const MaintenanceRequest = require("../models/maintenanceRequestModel");
 const Notification = require("../models/notificationModel");
 const ApiError = require("../utils/apiError");

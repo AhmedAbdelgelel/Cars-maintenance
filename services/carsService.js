@@ -117,7 +117,8 @@ exports.getCarById = asyncHandler(async (req, res, next) => {
 
 exports.createCar = asyncHandler(async (req, res, next) => {
   // Only admin can create cars
-  if (req.user.role !== "admin") {
+  const role = req.user?.role || req.accountant?.role;
+  if (role !== "admin") {
     return next(new ApiError("Only admin can add cars", 403));
   }
   const existingCar = await Car.findOne({ plateNumber: req.body.plateNumber });
@@ -146,7 +147,8 @@ exports.createCar = asyncHandler(async (req, res, next) => {
 exports.updateCar = asyncHandler(async (req, res, next) => {
   try {
     // Only admin can change car status
-    if (req.body.status && req.user.role !== "admin") {
+    const role = req.user?.role || req.accountant?.role;
+    if (req.body.status && role !== "admin") {
       return next(
         new ApiError("Only administrators can change car status", 403)
       );
@@ -206,7 +208,8 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
 
 exports.deleteCar = asyncHandler(async (req, res, next) => {
   // Only admin can delete cars
-  if (req.user.role !== "admin") {
+  const role = req.user?.role || req.accountant?.role;
+  if (role !== "admin") {
     return next(new ApiError("Only admin can delete cars", 403));
   }
   const car = await Car.findById(req.params.id);

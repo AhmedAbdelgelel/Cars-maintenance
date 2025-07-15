@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const Driver = require("../models/driverModel");
 const Admin = require("../models/adminModel");
+const Accountant = require("../models/accountantModel");
 const ApiError = require("../utils/apiError");
 const Receiver = require("../models/receiverModel");
 exports.protect = async (req, res, next) => {
@@ -50,6 +51,15 @@ exports.protect = async (req, res, next) => {
       }
       req.admin = currentUser;
       return next();
+    } else if (decoded.role === "accountant") {
+      currentUser = await Accountant.findById(decoded.id);
+      if (!currentUser) {
+        return next(
+          new ApiError("The user belonging to this token no longer exists", 401)
+        );
+      }
+      req.accountant = currentUser;
+      return next();
     }
     return next(
       new ApiError("The user belonging to this token no longer exists", 401)
@@ -70,7 +80,15 @@ exports.protect = async (req, res, next) => {
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {
     if (req.admin) {
-      if (roles.includes("admin")) {
+      if (roles.includes(req.admin.role)) {
+        return next();
+      }
+      return next(
+        new ApiError("You do not have permission to perform this action", 403)
+      );
+    }
+    if (req.accountant) {
+      if (roles.includes("accountant")) {
         return next();
       }
       return next(

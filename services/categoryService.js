@@ -43,7 +43,8 @@ exports.getCategoryById = asyncHandler(async (req, res, next) => {
 
 exports.createCategory = asyncHandler(async (req, res, next) => {
   // Only admin can add categories
-  if (req.user.role !== "admin") {
+  const role = req.user?.role || req.accountant?.role;
+  if (role !== "admin") {
     return next(new ApiError("Only admin can add categories", 403));
   }
   const existingCategory = await Category.findOne({
@@ -66,6 +67,10 @@ exports.createCategory = asyncHandler(async (req, res, next) => {
 });
 
 exports.updateCategory = asyncHandler(async (req, res, next) => {
+  const role = req.user?.role || req.accountant?.role;
+  if (role !== "admin") {
+    return next(new ApiError("Only admin can update categories", 403));
+  }
   const category = await Category.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
   })
@@ -89,6 +94,10 @@ exports.updateCategory = asyncHandler(async (req, res, next) => {
 });
 
 exports.deleteCategory = asyncHandler(async (req, res, next) => {
+  const role = req.user?.role || req.accountant?.role;
+  if (role !== "admin") {
+    return next(new ApiError("Only admin can delete categories", 403));
+  }
   const category = await Category.findById(req.params.id);
 
   if (!category) {

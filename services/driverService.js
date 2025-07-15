@@ -31,7 +31,7 @@ const validateUniqueFields = async (data, driverId = null) => {
 
 exports.createDriver = asyncHandler(async (req, res, next) => {
   // Only admin can add drivers
-  if (req.user.role !== "admin") {
+  if (!req.user || req.user.role !== "admin") {
     return next(new ApiError("Only admin can add drivers", 403));
   }
   await validateUniqueFields(req.body);
@@ -119,6 +119,11 @@ exports.getDriverByPhoneNumber = asyncHandler(async (req, res, next) => {
 });
 
 exports.updateDriver = asyncHandler(async (req, res, next) => {
+  // Only admin or accountant can edit drivers
+  const userRole = req.user?.role || req.accountant?.role;
+  if (!userRole || !["admin", "accountant"].includes(userRole)) {
+    return next(new ApiError("Only admin or accountant can edit drivers", 403));
+  }
   await validateUniqueFields(req.body, req.params.id);
 
   if (req.body.car === null) {
@@ -159,7 +164,7 @@ exports.updateDriver = asyncHandler(async (req, res, next) => {
 
 exports.deleteDriver = asyncHandler(async (req, res, next) => {
   // Only admin can delete drivers
-  if (req.user.role !== "admin") {
+  if (!req.user || req.user.role !== "admin") {
     return next(new ApiError("Only admin can delete drivers", 403));
   }
   const driver = await Driver.findById(req.params.id);
