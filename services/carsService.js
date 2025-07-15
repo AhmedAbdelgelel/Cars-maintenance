@@ -1,4 +1,10 @@
-// Get meter readings for all cars between two dates
+const Car = require("../models/carsModel");
+const Driver = require("../models/driverModel");
+const Maintenance = require("../models/maintenanceModel");
+const ApiError = require("../utils/apiError");
+const asyncHandler = require("express-async-handler");
+const ApiFeatures = require("../utils/apiFeatures");
+
 exports.getMeterReadings = asyncHandler(async (req, res) => {
   const { startDate, endDate } = req.query;
   if (!startDate || !endDate) {
@@ -31,12 +37,6 @@ exports.getMeterReadings = asyncHandler(async (req, res) => {
     data: result,
   });
 });
-const Car = require("../models/carsModel");
-const Driver = require("../models/driverModel");
-const Maintenance = require("../models/maintenanceModel");
-const ApiError = require("../utils/apiError");
-const asyncHandler = require("express-async-handler");
-const ApiFeatures = require("../utils/apiFeatures");
 
 exports.getAllCars = asyncHandler(async (req, res) => {
   const apiFeatures = new ApiFeatures(Car.find(), req.query, [
