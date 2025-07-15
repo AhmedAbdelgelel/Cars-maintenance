@@ -2,7 +2,7 @@ const SubCategory = require("../models/subCategoryModel");
 const Category = require("../models/categoryModel");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("express-async-handler");
-
+const ApiFeatures = require("../utils/apiFeatures");
 const validateCustomFields = (customFields) => {
   if (!Array.isArray(customFields))
     return { isValid: false, message: "Custom fields must be an array" };
@@ -28,10 +28,13 @@ const checkCategoryExists = async (categoryId) => {
 };
 
 exports.getAllSubCategories = asyncHandler(async (req, res) => {
-  const subCategories = await SubCategory.find()
+  const apiFeatures = new ApiFeatures(SubCategory.find(), req.query, [
+    "name",
+    "description",
+  ]).search();
+  const subCategories = await apiFeatures.query
     .select("-__v")
     .populate("category", "name");
-
   res.status(200).json({
     status: "success",
     results: subCategories.length,
