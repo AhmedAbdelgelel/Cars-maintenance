@@ -6,18 +6,20 @@ const asyncHandler = require("express-async-handler");
 exports.getAllCategories = asyncHandler(async (req, res) => {
   let filter = {};
   if (req.query.search) {
+    // Find subcategories that match the search
+    const SubCategory = require("../models/subCategoryModel");
+    const subCats = await SubCategory.find({
+      name: { $regex: req.query.search, $options: "i" },
+    }).select("_id");
+    const subCatIds = subCats.map((s) => s._id);
     filter = {
       $or: [
         { name: { $regex: req.query.search, $options: "i" } },
-        { "subCategories.name": { $regex: req.query.search, $options: "i" } },
+        { subCategories: { $in: subCatIds } },
       ],
     };
   }
-  const apiFeatures = new ApiFeatures(Category.find(filter), req.query, [
-    "name",
-    "subCategories",
-  ]).search();
-  const categories = await apiFeatures.query
+  let categories = await Category.find(filter)
     .populate({
       path: "subCategories",
       select: "-__v",
