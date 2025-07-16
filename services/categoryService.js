@@ -4,8 +4,18 @@ const ApiFeatures = require("../utils/apiFeatures");
 const asyncHandler = require("express-async-handler");
 
 exports.getAllCategories = asyncHandler(async (req, res) => {
-  const apiFeatures = new ApiFeatures(Category.find(), req.query, [
+  let filter = {};
+  if (req.query.search) {
+    filter = {
+      $or: [
+        { name: { $regex: req.query.search, $options: "i" } },
+        { "subCategories.name": { $regex: req.query.search, $options: "i" } },
+      ],
+    };
+  }
+  const apiFeatures = new ApiFeatures(Category.find(filter), req.query, [
     "name",
+    "subCategories",
   ]).search();
   const categories = await apiFeatures.query
     .populate({
