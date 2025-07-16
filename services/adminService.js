@@ -1,4 +1,5 @@
 const Admin = require("../models/adminModel");
+const Accountant = require("../models/accountantModel");
 const ApiError = require("../utils/apiError");
 const generateToken = require("../utils/generateToken");
 const bcrypt = require("bcryptjs");
@@ -45,29 +46,38 @@ exports.login = asyncHandler(async (req, res, next) => {
   if (!email || !password) {
     return next(new ApiError("Please provide email and password", 400));
   }
-  const admin = await Admin.findOne({ email }).select("-__v");
 
-  if (!admin) {
+  // Try to find user in Admin model
+  let user = await Admin.findOne({ email }).select("-__v");
+  let role = "admin";
+
+  // If not found, try Accountant model
+  if (!user) {
+    user = await Accountant.findOne({ email }).select("-__v");
+    role = "accountant";
+  }
+
+  if (!user) {
     return next(new ApiError("Incorrect email or password", 401));
   }
 
-  const isMatch = await bcrypt.compare(password, admin.password);
+  const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     return next(new ApiError("Incorrect email or password", 401));
   }
 
-  if (!admin.isActive) {
+  if (!user.isActive) {
     return next(new ApiError("Your account has been deactivated", 401));
   }
 
-  const token = generateToken(admin._id, admin.role || "admin");
-
-  const safeAdmin = await Admin.findById(admin._id).select("-password -__v");
+  const token = generateToken(user._id, user.role || role);
+  const { password: pwd, ...safeUser } = user.toObject();
 
   res.status(200).json({
     status: "success",
     token,
-    user: safeAdmin,
+    user: safeUser,
+    role: user.role || role,
   });
 });
 

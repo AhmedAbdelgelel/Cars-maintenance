@@ -1,25 +1,33 @@
 const Category = require("../models/categoryModel");
 const ApiError = require("../utils/apiError");
+const SubCategory = require("../models/subCategoryModel");
 const ApiFeatures = require("../utils/apiFeatures");
 const asyncHandler = require("express-async-handler");
 
 exports.getAllCategories = asyncHandler(async (req, res) => {
   let filter = {};
   if (req.query.search) {
-    // Find subcategories that match the search
-    const SubCategory = require("../models/subCategoryModel");
+    // Always treat search as a string
+    const searchString = String(req.query.search);
     const subCats = await SubCategory.find({
-      name: { $regex: req.query.search, $options: "i" },
+      name: { $regex: searchString, $options: "i" },
     }).select("_id");
-    const subCatIds = subCats.map((s) => s._id);
-    filter = {
-      $or: [
-        { name: { $regex: req.query.search, $options: "i" } },
-        { subCategories: { $in: subCatIds } },
-      ],
-    };
+    const subCatIds = subCats.map((s) => s._id).filter(Boolean);
+    if (subCatIds.length > 0) {
+      filter = {
+        $or: [
+          { name: { $regex: searchString, $options: "i" } },
+          { subCategories: { $in: subCatIds } },
+        ],
+      };
+    } else {
+      filter = { name: { $regex: searchString, $options: "i" } };
+    }
   }
-  let categories = await Category.find(filter)
+  const apiFeatures = new ApiFeatures(Category.find(filter), req.query, [
+    "name",
+  ]).search();
+  let categories = await apiFeatures.query
     .populate({
       path: "subCategories",
       select: "-__v",
