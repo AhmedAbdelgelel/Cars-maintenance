@@ -52,9 +52,15 @@ exports.analyzeMeterImage = async (req, res, next) => {
 
     if (readingToSave) {
       const currentDate = new Date();
-
+      // Always update car.meterReading with the new value (OCR or manual)
       car.meterReading = readingToSave;
       car.lastMeterUpdate = currentDate;
+      // Push new reading to meterReadingsHistory
+      car.meterReadingsHistory.push({ reading: readingToSave, date: currentDate });
+      // Only update lastOCRCheck if explicitly provided
+      if (req.body.updateLastOCRCheck === true) {
+        car.lastOCRCheck = readingToSave;
+      }
       await car.save();
 
       driver.carMeter = {
@@ -79,7 +85,7 @@ exports.analyzeMeterImage = async (req, res, next) => {
 };
 
 exports.updateDriverMeterReading = async (req, res, next) => {
-  const { meterReading } = req.body;
+  const { meterReading, updateLastOCRCheck } = req.body;
   const currentDate = new Date();
 
   try {
@@ -95,9 +101,19 @@ exports.updateDriverMeterReading = async (req, res, next) => {
       return next(new ApiError("No car is assigned to this driver", 400));
     }
 
+    // Build update object
+    const updateObj = {
+      meterReading,
+      lastMeterUpdate: currentDate,
+      $push: { meterReadingsHistory: { reading: meterReading, date: currentDate } },
+    };
+    if (updateLastOCRCheck === true) {
+      updateObj.lastOCRCheck = meterReading;
+    }
+
     await Car.findByIdAndUpdate(
       driver.car,
-      { meterReading, lastMeterUpdate: currentDate },
+      updateObj,
       { new: true }
     );
 
