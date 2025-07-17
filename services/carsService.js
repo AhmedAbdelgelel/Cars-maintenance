@@ -136,6 +136,11 @@ exports.createCar = asyncHandler(async (req, res, next) => {
       Driver.findByIdAndUpdate(req.body.driver, { car: car._id }),
       Car.findByIdAndUpdate(car._id, { driver: req.body.driver }),
     ]);
+    // Set status to 'in_use' if driver(s) assigned
+    await Car.findByIdAndUpdate(car._id, { status: 'in_use' });
+  } else {
+    // Set status to 'available' if no driver
+    await Car.findByIdAndUpdate(car._id, { status: 'available' });
   }
   res.status(201).json({
     status: "success",
@@ -194,6 +199,11 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
         ),
         Driver.updateMany({ _id: { $in: req.body.driver } }, { car: car._id }),
       ]);
+      // Set status to 'in_use' if driver(s) assigned
+      await Car.findByIdAndUpdate(car._id, { status: 'in_use' });
+    } else if (req.body.driver === null || (Array.isArray(req.body.driver) && req.body.driver.length === 0)) {
+      // Set status to 'available' if no driver
+      await Car.findByIdAndUpdate(car._id, { status: 'available' });
     }
 
     res.status(200).json({
