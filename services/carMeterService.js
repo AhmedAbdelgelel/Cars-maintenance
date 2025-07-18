@@ -50,6 +50,21 @@ exports.analyzeMeterImage = async (req, res, next) => {
       }
     }
 
+    // If no valid reading, do not update or upload
+    if (!readingToSave && readingToSave !== 0) {
+      return res.status(200).json({
+        status: "success",
+        data: {
+          meterReading,
+          imagePath: `/${req.file.path}`,
+          driverId: driver._id,
+          carId: car._id,
+          savedReading: null,
+          message: "No valid meter reading detected. Nothing was uploaded."
+        },
+      });
+    }
+
     if (readingToSave) {
       const currentDate = new Date();
       // Always update car.meterReading with the new value (OCR or manual)
