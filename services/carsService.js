@@ -159,8 +159,13 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
     if (req.body.oilChangeReminderKM && req.body.oilChangeReminderKM > 0) {
       const currentCar = await Car.findById(req.params.id);
       if (currentCar) {
-        req.body.oilChangeReminderPoint = currentCar.meterReading + req.body.oilChangeReminderKM;
+        req.body.oilChangeReminderPoint = Number(currentCar.meterReading) + Number(req.body.oilChangeReminderKM);
       }
+    }
+
+    // If meterReading is being updated, also update lastOCRCheck to match
+    if (typeof req.body.meterReading !== 'undefined') {
+      req.body.lastOCRCheck = req.body.meterReading;
     }
 
     const car = await Car.findByIdAndUpdate(req.params.id, req.body, {
