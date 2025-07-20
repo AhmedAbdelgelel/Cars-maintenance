@@ -172,6 +172,9 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
     let meterReadingWasUpdated = false;
     let shouldPushHistory = false;
     let historyReading = null;
+    if (typeof req.body.oilChangeReminderKM !== 'undefined') {
+      req.body.ocrShouldSetBase = true;
+    }
     if (typeof req.body.meterReading !== 'undefined') {
       const currentCar = await Car.findById(req.params.id);
       if (!currentCar.meterReading || currentCar.meterReading === 0) {
@@ -180,18 +183,19 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
         req.body.lastOCRCheck = req.body.meterReading;
         req.body.lastUpdateSource = 'admin';
         meterReadingWasUpdated = true;
-        shouldPushHistory = true;
-        historyReading = req.body.meterReading;
         if (req.body.oilChangeReminderKM && req.body.oilChangeReminderKM > 0) {
           req.body.oilChangeReminderPoint = Number(req.body.meterReading) + Number(req.body.oilChangeReminderKM);
         } else {
           req.body.oilChangeReminderPoint = Number(req.body.meterReading) + Number(currentCar.oilChangeReminderKM || 0);
         }
       } else {
-        // Subsequent readings: only update lastOCRCheck
+        // Subsequent readings: only update lastOCRCheck and meterReadingsHistory
         req.body.lastOCRCheck = Number(req.body.meterReading);
-        shouldPushHistory = true;
-        historyReading = req.body.meterReading;
+        req.body.$push = req.body.$push || {};
+        req.body.$push.meterReadingsHistory = {
+          reading: req.body.meterReading,
+          date: new Date(),
+        };
         // Do NOT update meterReading or oilChangeReminderPoint
         delete req.body.meterReading;
         delete req.body.oilChangeReminderPoint;

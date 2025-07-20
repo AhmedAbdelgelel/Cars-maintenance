@@ -65,7 +65,17 @@ exports.analyzeMeterImage = async (req, res, next) => {
 
     if (readingToSave) {
       const currentDate = new Date();
-      if (!car.meterReading || car.meterReading === 0) {
+      // Check if OCR should set the base (after oilChangeReminderKM was changed by admin)
+      if (car.ocrShouldSetBase) {
+        car.meterReading = readingToSave;
+        car.lastOCRCheck = readingToSave;
+        if (car.oilChangeReminderKM && car.oilChangeReminderKM > 0) {
+          car.oilChangeReminderPoint = Number(readingToSave) + Number(car.oilChangeReminderKM);
+        } else {
+          car.oilChangeReminderPoint = Number(readingToSave) + Number(car.oilChangeReminderKM || 0);
+        }
+        car.ocrShouldSetBase = false; // Reset the flag after using it
+      } else if (!car.meterReading || car.meterReading === 0) {
         // First reading: set meterReading, oilChangeReminderPoint, and lastOCRCheck
         car.meterReading = readingToSave;
         car.lastOCRCheck = readingToSave;
