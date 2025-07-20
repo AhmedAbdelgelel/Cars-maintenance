@@ -39,15 +39,13 @@ exports.analyzeMeterImage = async (req, res, next) => {
       meterReading.possibleReadings &&
       meterReading.possibleReadings.length > 0
     ) {
+      // Always select the largest value from possibleReadings
       const sortedReadings = [...meterReading.possibleReadings].sort(
         (a, b) => Number(b.value) - Number(a.value)
       );
-
-      const likelyOdometer = sortedReadings.find((r) => Number(r.value) > 1000);
-
-      if (likelyOdometer) {
-        readingToSave = Number(likelyOdometer.value);
-      }
+      const largestReading = sortedReadings[0];
+      readingToSave = Number(largestReading.value);
+      meterReading.selectedContext = largestReading.context; // Add context for frontend
     }
 
     // If no valid reading, do not update or upload
@@ -84,6 +82,27 @@ exports.analyzeMeterImage = async (req, res, next) => {
       };
       await driver.save();
     }
+    // Calculate oil change status based on admin-set reminder
+    let oilChangeKM = 0;
+    let needsOilChange = false;
+    let nextOilChangeKM = 0;
+    
+    if (car.oilChangeReminderKM > 0) {
+      // Use the static reminder point set by admin
+      const reminderPoint = car.oilChangeReminderPoint;
+      
+      // Calculate how many KM since the reminder point
+      oilChangeKM = car.meterReading - reminderPoint;
+      
+      // If we've reached or exceeded the reminder point, oil change is needed
+      if (oilChangeKM >= 0) {
+        needsOilChange = true;
+      }
+      
+      // Show the static reminder point (doesn't change with each reading)
+      nextOilChangeKM = reminderPoint;
+    }
+    
     res.status(200).json({
       status: "success",
       data: {
@@ -92,6 +111,10 @@ exports.analyzeMeterImage = async (req, res, next) => {
         driverId: driver._id,
         carId: car._id,
         savedReading: readingToSave || null,
+        oilChangeKM: Math.max(0, oilChangeKM), // Don't show negative values
+        needsOilChange,
+        oilChangeReminderKM: car.oilChangeReminderKM,
+        nextOilChangeKM,
       },
     });
   } catch (error) {
@@ -165,11 +188,36 @@ exports.updateDriverMeterReading = async (req, res, next) => {
     };
     await driver.save();
 
+    // Calculate oil change status based on admin-set reminder
+    let oilChangeKM = 0;
+    let needsOilChange = false;
+    let nextOilChangeKM = 0;
+    
+    if (updatedCar.oilChangeReminderKM > 0) {
+      // Use the static reminder point set by admin
+      const reminderPoint = updatedCar.oilChangeReminderPoint;
+      
+      // Calculate how many KM since the reminder point
+      oilChangeKM = updatedCar.meterReading - reminderPoint;
+      
+      // If we've reached or exceeded the reminder point, oil change is needed
+      if (oilChangeKM >= 0) {
+        needsOilChange = true;
+      }
+      
+      // Show the static reminder point (doesn't change with each reading)
+      nextOilChangeKM = reminderPoint;
+    }
+    
     res.status(200).json({
       status: "success",
       message: "Car meter reading updated successfully",
       data: {
         car: updatedCar,
+        oilChangeKM: Math.max(0, oilChangeKM), // Don't show negative values
+        needsOilChange,
+        oilChangeReminderKM: updatedCar.oilChangeReminderKM,
+        nextOilChangeKM,
       },
     });
   } catch (error) {
@@ -239,10 +287,19 @@ function extractMeterReading(result) {
 
   allText.forEach((text) => {
     numberPattern.lastIndex = 0;
-
+    let numbersInContext = [];
     while ((match = numberPattern.exec(text)) !== null) {
       meterData.possibleReadings.push({
         value: match[0],
+        context: text,
+      });
+      numbersInContext.push(match[0]);
+    }
+    // If more than one number in the context, concatenate them and add as a possible reading
+    if (numbersInContext.length > 1) {
+      const concatenated = numbersInContext.join("");
+      meterData.possibleReadings.push({
+        value: concatenated,
         context: text,
       });
     }

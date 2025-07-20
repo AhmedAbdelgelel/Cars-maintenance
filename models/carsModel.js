@@ -43,6 +43,10 @@ const carsSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  oilChangeReminderPoint: {
+    type: Number,
+    default: 0,
+  },
   examinationDate: {
     type: Date,
   },

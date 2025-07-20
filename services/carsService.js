@@ -53,11 +53,8 @@ exports.getAllCars = asyncHandler(async (req, res) => {
       ],
     });
 
-  // Add oilChangeKM to each car
-  const carsWithOilChange = cars.map((car) => ({
-    ...car.toObject(),
-    oilChangeKM: car.meterReading - car.lastOCRCheck,
-  }));
+  // Return cars without additional oil change calculations
+  const carsWithOilChange = cars.map((car) => car.toObject());
   res.status(200).json({
     status: "success",
     results: carsWithOilChange.length,
@@ -106,9 +103,8 @@ exports.getCarById = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Add oilChangeKM to car response
+  // Return car without additional oil change calculations
   const carObj = car.toObject();
-  carObj.oilChangeKM = carObj.meterReading - carObj.lastOCRCheck;
   res.status(200).json({
     status: "success",
     data: carObj,
@@ -157,6 +153,14 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
       return next(
         new ApiError("Only administrators can change car status", 403)
       );
+    }
+
+    // If admin is setting oil change reminder, calculate and store the reminder point
+    if (req.body.oilChangeReminderKM && req.body.oilChangeReminderKM > 0) {
+      const currentCar = await Car.findById(req.params.id);
+      if (currentCar) {
+        req.body.oilChangeReminderPoint = currentCar.meterReading + req.body.oilChangeReminderKM;
+      }
     }
 
     const car = await Car.findByIdAndUpdate(req.params.id, req.body, {
