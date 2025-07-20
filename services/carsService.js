@@ -53,8 +53,12 @@ exports.getAllCars = asyncHandler(async (req, res) => {
       ],
     });
 
-  // Return cars without additional oil change calculations
-  const carsWithOilChange = cars.map((car) => car.toObject());
+  // Add meterReadingWasUpdated to each car
+  const carsWithOilChange = cars.map((car) => {
+    const carObj = car.toObject();
+    carObj.meterReadingWasUpdated = carObj.meterReading === carObj.lastOCRCheck;
+    return carObj;
+  });
   res.status(200).json({
     status: "success",
     results: carsWithOilChange.length,
@@ -103,8 +107,9 @@ exports.getCarById = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Return car without additional oil change calculations
+  // Add meterReadingWasUpdated to car
   const carObj = car.toObject();
+  carObj.meterReadingWasUpdated = carObj.meterReading === carObj.lastOCRCheck;
   res.status(200).json({
     status: "success",
     data: carObj,
@@ -167,6 +172,7 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
     let meterReadingWasUpdated = false;
     if (typeof req.body.meterReading !== 'undefined') {
       req.body.lastOCRCheck = req.body.meterReading;
+      req.body.lastUpdateSource = 'admin';
       meterReadingWasUpdated = true;
       // If oilChangeReminderKM is present, recalculate oilChangeReminderPoint based on the new meterReading
       if (req.body.oilChangeReminderKM && req.body.oilChangeReminderKM > 0) {

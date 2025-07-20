@@ -56,6 +56,11 @@ const carsSchema = new mongoose.Schema({
   lastMeterUpdate: {
     type: Date,
   },
+  lastUpdateSource: {
+    type: String,
+    enum: ['admin', 'ocr'],
+    default: 'admin',
+  },
   meterReadingsHistory: [
     {
       reading: { type: Number, required: true },
