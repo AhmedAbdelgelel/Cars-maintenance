@@ -53,10 +53,10 @@ exports.getAllCars = asyncHandler(async (req, res) => {
       ],
     });
 
-  // Add meterReadingWasUpdated to each car
+  // Add needsOilChange to each car
   const carsWithOilChange = cars.map((car) => {
     const carObj = car.toObject();
-    carObj.meterReadingWasUpdated = carObj.meterReading === carObj.lastOCRCheck;
+    carObj.needsOilChange = (carObj.oilChangeReminderPoint > 0) && (carObj.meterReading >= carObj.oilChangeReminderPoint);
     return carObj;
   });
   res.status(200).json({
@@ -107,9 +107,9 @@ exports.getCarById = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Add meterReadingWasUpdated to car
+  // Add needsOilChange to car
   const carObj = car.toObject();
-  carObj.meterReadingWasUpdated = carObj.meterReading === carObj.lastOCRCheck;
+  carObj.needsOilChange = (carObj.oilChangeReminderPoint > 0) && (carObj.meterReading >= carObj.oilChangeReminderPoint);
   res.status(200).json({
     status: "success",
     data: carObj,
