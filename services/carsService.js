@@ -158,9 +158,10 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
     // If admin is setting oil change reminder, calculate and store the reminder point
     if (req.body.oilChangeReminderKM && req.body.oilChangeReminderKM > 0) {
       const currentCar = await Car.findById(req.params.id);
-      if (currentCar) {
-        req.body.oilChangeReminderPoint = Number(currentCar.meterReading) + Number(req.body.oilChangeReminderKM);
-      }
+      const meterReadingToUse = typeof req.body.meterReading !== 'undefined'
+        ? Number(req.body.meterReading)
+        : Number(currentCar.meterReading);
+      req.body.oilChangeReminderPoint = meterReadingToUse + Number(req.body.oilChangeReminderKM);
     }
 
     // If meterReading is being updated, also update lastOCRCheck to match
