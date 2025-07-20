@@ -170,6 +170,8 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
     }
 
     let meterReadingWasUpdated = false;
+    let shouldPushHistory = false;
+    let historyReading = null;
     if (typeof req.body.meterReading !== 'undefined') {
       const currentCar = await Car.findById(req.params.id);
       if (!currentCar.meterReading || currentCar.meterReading === 0) {
@@ -178,25 +180,25 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
         req.body.lastOCRCheck = req.body.meterReading;
         req.body.lastUpdateSource = 'admin';
         meterReadingWasUpdated = true;
+        shouldPushHistory = true;
+        historyReading = req.body.meterReading;
         if (req.body.oilChangeReminderKM && req.body.oilChangeReminderKM > 0) {
           req.body.oilChangeReminderPoint = Number(req.body.meterReading) + Number(req.body.oilChangeReminderKM);
         } else {
           req.body.oilChangeReminderPoint = Number(req.body.meterReading) + Number(currentCar.oilChangeReminderKM || 0);
         }
       } else {
-        // Subsequent readings: only update lastOCRCheck and meterReadingsHistory
+        // Subsequent readings: only update lastOCRCheck
         req.body.lastOCRCheck = Number(req.body.meterReading);
-        req.body.$push = req.body.$push || {};
-        req.body.$push.meterReadingsHistory = {
-          reading: req.body.meterReading,
-          date: new Date(),
-        };
+        shouldPushHistory = true;
+        historyReading = req.body.meterReading;
         // Do NOT update meterReading or oilChangeReminderPoint
         delete req.body.meterReading;
         delete req.body.oilChangeReminderPoint;
       }
     }
 
+    // Main update
     const car = await Car.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
     })
@@ -225,12 +227,11 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
         ],
       });
 
-    // After updating, push to meterReadingsHistory if needed
-    if (meterReadingWasUpdated) {
-      await Car.findByIdAndUpdate(
-        req.params.id,
-        { $push: { meterReadingsHistory: { reading: req.body.meterReading, date: new Date() } } }
-      );
+    // Push to meterReadingsHistory if needed
+    if (shouldPushHistory && historyReading !== null) {
+      await Car.findByIdAndUpdate(req.params.id, {
+        $push: { meterReadingsHistory: { reading: historyReading, date: new Date() } }
+      });
     }
 
     if (!car) {
