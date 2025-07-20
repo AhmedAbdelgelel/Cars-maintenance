@@ -165,14 +165,10 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
     }
 
     // If meterReading is being updated, also update lastOCRCheck to match
+    let meterReadingWasUpdated = false;
     if (typeof req.body.meterReading !== 'undefined') {
       req.body.lastOCRCheck = req.body.meterReading;
-      // Add new meter reading to history
-      req.body.$push = req.body.$push || {};
-      req.body.$push.meterReadingsHistory = {
-        reading: req.body.meterReading,
-        date: new Date(),
-      };
+      meterReadingWasUpdated = true;
     }
 
     const car = await Car.findByIdAndUpdate(req.params.id, req.body, {
@@ -202,6 +198,14 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
           },
         ],
       });
+
+    // After updating, push to meterReadingsHistory if needed
+    if (meterReadingWasUpdated) {
+      await Car.findByIdAndUpdate(
+        req.params.id,
+        { $push: { meterReadingsHistory: { reading: req.body.meterReading, date: new Date() } } }
+      );
+    }
 
     if (!car) {
       return next(new ApiError("No car found with this id", 404));
