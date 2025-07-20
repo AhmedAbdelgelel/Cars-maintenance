@@ -53,11 +53,27 @@ exports.getAllCars = asyncHandler(async (req, res) => {
       ],
     });
 
-  // Add needsOilChange to each car
+  // Add oil change calculation fields to each car
   const carsWithOilChange = cars.map((car) => {
     const carObj = car.toObject();
-    carObj.needsOilChange = (carObj.oilChangeReminderPoint > 0) && (carObj.meterReading >= carObj.oilChangeReminderPoint);
-    return carObj;
+    let oilChangeKM = 0;
+    let oilMustChange = false;
+    let nextOilChangeKM = 0;
+    if (carObj.oilChangeReminderKM > 0) {
+      const reminderPoint = carObj.oilChangeReminderPoint;
+      oilChangeKM = carObj.meterReading - reminderPoint;
+      if (oilChangeKM >= 0) {
+        oilMustChange = true;
+      }
+      nextOilChangeKM = reminderPoint;
+    }
+    return {
+      ...carObj,
+      oilMustChange,
+      oilChangeKM: Math.max(0, oilChangeKM),
+      oilChangeReminderKM: carObj.oilChangeReminderKM,
+      nextOilChangeKM,
+    };
   });
   res.status(200).json({
     status: "success",
@@ -107,12 +123,29 @@ exports.getCarById = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Add needsOilChange to car
+  // Add oil change calculation fields to the car
   const carObj = car.toObject();
-  carObj.needsOilChange = (carObj.oilChangeReminderPoint > 0) && (carObj.meterReading >= carObj.oilChangeReminderPoint);
+  let oilChangeKM = 0;
+  let oilMustChange = false;
+  let nextOilChangeKM = 0;
+  if (carObj.oilChangeReminderKM > 0) {
+    const reminderPoint = carObj.oilChangeReminderPoint;
+    oilChangeKM = carObj.meterReading - reminderPoint;
+    if (oilChangeKM >= 0) {
+      oilMustChange = true;
+    }
+    nextOilChangeKM = reminderPoint;
+  }
+
   res.status(200).json({
     status: "success",
-    data: carObj,
+    data: {
+      ...carObj,
+      oilMustChange,
+      oilChangeKM: Math.max(0, oilChangeKM),
+      oilChangeReminderKM: carObj.oilChangeReminderKM,
+      nextOilChangeKM,
+    },
   });
 });
 
@@ -160,49 +193,38 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
       );
     }
 
-    // If admin is setting oil change reminder, calculate and store the reminder point
-    if (req.body.oilChangeReminderKM && req.body.oilChangeReminderKM > 0) {
-      const currentCar = await Car.findById(req.params.id);
-      const meterReadingToUse = typeof req.body.meterReading !== 'undefined'
-        ? Number(req.body.meterReading)
-        : Number(currentCar.meterReading);
-      req.body.oilChangeReminderPoint = meterReadingToUse + Number(req.body.oilChangeReminderKM);
+    // Fetch the current car
+    const currentCar = await Car.findById(req.params.id);
+    if (!currentCar) {
+      return next(new ApiError("No car found with this id", 404));
+    }
+
+    // If meterReading is present, push it to meterReadingsHistory but do not update main meterReading
+    if (typeof req.body.meterReading !== 'undefined') {
+      await Car.findByIdAndUpdate(
+        req.params.id,
+        { $push: { meterReadingsHistory: { reading: req.body.meterReading, date: new Date() } } }
+      );
+      delete req.body.meterReading;
+    }
+    if (typeof req.body.meterReadingsHistory !== 'undefined') {
+      delete req.body.meterReadingsHistory;
     }
 
     let meterReadingWasUpdated = false;
-    let shouldPushHistory = false;
-    let historyReading = null;
-    if (typeof req.body.oilChangeReminderKM !== 'undefined') {
-      req.body.ocrShouldSetBase = true;
-    }
-    if (typeof req.body.meterReading !== 'undefined') {
-      const currentCar = await Car.findById(req.params.id);
-      if (!currentCar.meterReading || currentCar.meterReading === 0) {
-        // First reading: set meterReading, oilChangeReminderPoint, and lastOCRCheck
-        req.body.meterReading = Number(req.body.meterReading);
-        req.body.lastOCRCheck = req.body.meterReading;
-        req.body.lastUpdateSource = 'admin';
-        meterReadingWasUpdated = true;
-        if (req.body.oilChangeReminderKM && req.body.oilChangeReminderKM > 0) {
-          req.body.oilChangeReminderPoint = Number(req.body.meterReading) + Number(req.body.oilChangeReminderKM);
-        } else {
-          req.body.oilChangeReminderPoint = Number(req.body.meterReading) + Number(currentCar.oilChangeReminderKM || 0);
-        }
-      } else {
-        // Subsequent readings: only update lastOCRCheck and meterReadingsHistory
-        req.body.lastOCRCheck = Number(req.body.meterReading);
-        req.body.$push = req.body.$push || {};
-        req.body.$push.meterReadingsHistory = {
-          reading: req.body.meterReading,
-          date: new Date(),
-        };
-        // Do NOT update meterReading or oilChangeReminderPoint
-        delete req.body.meterReading;
-        delete req.body.oilChangeReminderPoint;
-      }
+    let oilChangeReminderPointShouldUpdate = false;
+
+    // If admin is setting oil change interval, recalculate reminder point using the latest meter reading
+    if (typeof req.body.oilChangeReminderKM !== 'undefined' && req.body.oilChangeReminderKM > 0 && role === "admin") {
+      // Use the latest meter reading (from OCR/driver or admin update)
+      let baseReading = Number(currentCar.meterReading);
+      req.body.oilChangeReminderPoint = baseReading + Number(req.body.oilChangeReminderKM);
+      oilChangeReminderPointShouldUpdate = true;
     }
 
-    // Main update
+    // If admin is updating meterReading, optionally update oilChangeReminderPoint if interval is present
+    // (This is now blocked above, so this block is not needed)
+
     const car = await Car.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
     })
@@ -231,13 +253,6 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
         ],
       });
 
-    // Push to meterReadingsHistory if needed
-    if (shouldPushHistory && historyReading !== null) {
-      await Car.findByIdAndUpdate(req.params.id, {
-        $push: { meterReadingsHistory: { reading: historyReading, date: new Date() } }
-      });
-    }
-
     if (!car) {
       return next(new ApiError("No car found with this id", 404));
     }
@@ -260,11 +275,7 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
     res.status(200).json({
       status: "success",
       message: "Car updated successfully",
-      data: car,
-      meterReadingWasUpdated,
-      lastOCRCheck: car.lastOCRCheck,
-      oilChangeReminderPoint: car.oilChangeReminderPoint,
-      meterReading: car.meterReading
+      data: car
     });
   } catch (error) {
     next(error);

@@ -35,10 +35,6 @@ const carsSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
-  baseMeterReading: {
-    type: Number,
-    default: 0,
-  },
   lastOCRCheck: {
     type: Number,
     default: 0,
@@ -59,11 +55,6 @@ const carsSchema = new mongoose.Schema({
   },
   lastMeterUpdate: {
     type: Date,
-  },
-  lastUpdateSource: {
-    type: String,
-    enum: ['admin', 'ocr'],
-    default: 'admin',
   },
   meterReadingsHistory: [
     {
