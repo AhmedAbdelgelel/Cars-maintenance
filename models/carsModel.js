@@ -35,6 +35,10 @@ const carsSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  baseMeterReading: {
+    type: Number,
+    default: 0,
+  },
   lastOCRCheck: {
     type: Number,
     default: 0,

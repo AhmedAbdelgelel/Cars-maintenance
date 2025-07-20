@@ -63,21 +63,23 @@ exports.analyzeMeterImage = async (req, res, next) => {
       });
     }
 
-    let meterReadingWasUpdated = false;
-    let previousReading = car ? car.meterReading : null;
     if (readingToSave) {
       const currentDate = new Date();
-      // Always update car.meterReading with the new value (OCR or manual)
-      car.meterReading = readingToSave;
-      car.lastMeterUpdate = currentDate;
-      // Push new reading to meterReadingsHistory
-      car.meterReadingsHistory.push({ reading: readingToSave, date: currentDate });
-      // Always update lastOCRCheck for OCR
-      car.lastOCRCheck = readingToSave;
-      // Recalculate oilChangeReminderPoint if oilChangeReminderKM is set
-      if (car.oilChangeReminderKM && car.oilChangeReminderKM > 0) {
-        car.oilChangeReminderPoint = Number(readingToSave) + Number(car.oilChangeReminderKM);
+      if (!car.meterReading || car.meterReading === 0) {
+        // First reading: set meterReading, oilChangeReminderPoint, and lastOCRCheck
+        car.meterReading = readingToSave;
+        car.lastOCRCheck = readingToSave;
+        if (car.oilChangeReminderKM && car.oilChangeReminderKM > 0) {
+          car.oilChangeReminderPoint = Number(readingToSave) + Number(car.oilChangeReminderKM);
+        } else {
+          car.oilChangeReminderPoint = Number(readingToSave) + Number(car.oilChangeReminderKM || 0);
+        }
+      } else {
+        // Subsequent readings: only update lastOCRCheck and meterReadingsHistory
+        car.lastOCRCheck = readingToSave;
+        // Do NOT update meterReading or oilChangeReminderPoint
       }
+      car.meterReadingsHistory.push({ reading: readingToSave, date: currentDate });
       car.lastUpdateSource = 'ocr';
       await car.save();
       driver.carMeter = {
@@ -85,9 +87,9 @@ exports.analyzeMeterImage = async (req, res, next) => {
         updateDate: currentDate,
       };
       await driver.save();
-      // Set the flag if the reading was actually updated
       meterReadingWasUpdated = previousReading !== readingToSave;
     }
+    
     // Calculate oil change status based on admin-set reminder
     let oilChangeKM = 0;
     let needsOilChange = false;
@@ -121,10 +123,6 @@ exports.analyzeMeterImage = async (req, res, next) => {
         needsOilChange,
         oilChangeReminderKM: car.oilChangeReminderKM,
         nextOilChangeKM,
-        meterReadingWasUpdated,
-        lastOCRCheck: car.lastOCRCheck,
-        oilChangeReminderPoint: car.oilChangeReminderPoint,
-        meterReading: car.meterReading
       },
     });
   } catch (error) {
