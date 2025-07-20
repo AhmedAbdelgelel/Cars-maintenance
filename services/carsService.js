@@ -167,6 +167,12 @@ exports.updateCar = asyncHandler(async (req, res, next) => {
     // If meterReading is being updated, also update lastOCRCheck to match
     if (typeof req.body.meterReading !== 'undefined') {
       req.body.lastOCRCheck = req.body.meterReading;
+      // Add new meter reading to history
+      req.body.$push = req.body.$push || {};
+      req.body.$push.meterReadingsHistory = {
+        reading: req.body.meterReading,
+        date: new Date(),
+      };
     }
 
     const car = await Car.findByIdAndUpdate(req.params.id, req.body, {
