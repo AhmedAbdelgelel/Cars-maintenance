@@ -58,7 +58,7 @@ exports.analyzeMeterImage = async (req, res, next) => {
           driverId: driver._id,
           carId: car._id,
           savedReading: null,
-          message: "No valid meter reading detected. Nothing was uploaded."
+          message: "No valid meter reading detected. Nothing was uploaded.",
         },
       });
     }
@@ -69,7 +69,10 @@ exports.analyzeMeterImage = async (req, res, next) => {
       car.meterReading = readingToSave;
       car.lastMeterUpdate = currentDate;
       // Push new reading to meterReadingsHistory
-      car.meterReadingsHistory.push({ reading: readingToSave, date: currentDate });
+      car.meterReadingsHistory.push({
+        reading: readingToSave,
+        date: currentDate,
+      });
       // Only update lastOCRCheck if explicitly provided
       if (req.body.updateLastOCRCheck === true) {
         car.lastOCRCheck = readingToSave;
@@ -86,23 +89,23 @@ exports.analyzeMeterImage = async (req, res, next) => {
     let oilChangeKM = 0;
     let needsOilChange = false;
     let nextOilChangeKM = 0;
-    
+
     if (car.oilChangeReminderKM > 0) {
       // Use the static reminder point set by admin
       const reminderPoint = car.oilChangeReminderPoint;
-      
+
       // Calculate how many KM since the reminder point
       oilChangeKM = car.meterReading - reminderPoint;
-      
+
       // If we've reached or exceeded the reminder point, oil change is needed
       if (oilChangeKM >= 0) {
         needsOilChange = true;
       }
-      
+
       // Show the static reminder point (doesn't change with each reading)
       nextOilChangeKM = reminderPoint;
     }
-    
+
     res.status(200).json({
       status: "success",
       data: {
@@ -143,17 +146,15 @@ exports.updateDriverMeterReading = async (req, res, next) => {
     const updateObj = {
       meterReading,
       lastMeterUpdate: currentDate,
-      $push: { meterReadingsHistory: { reading: meterReading, date: currentDate } },
+      $push: {
+        meterReadingsHistory: { reading: meterReading, date: currentDate },
+      },
     };
     if (updateLastOCRCheck === true) {
       updateObj.lastOCRCheck = meterReading;
     }
 
-    await Car.findByIdAndUpdate(
-      driver.car,
-      updateObj,
-      { new: true }
-    );
+    await Car.findByIdAndUpdate(driver.car, updateObj, { new: true });
 
     const updatedCar = await Car.findById(driver.car)
       .select(
@@ -192,23 +193,23 @@ exports.updateDriverMeterReading = async (req, res, next) => {
     let oilChangeKM = 0;
     let needsOilChange = false;
     let nextOilChangeKM = 0;
-    
+
     if (updatedCar.oilChangeReminderKM > 0) {
       // Use the static reminder point set by admin
       const reminderPoint = updatedCar.oilChangeReminderPoint;
-      
+
       // Calculate how many KM since the reminder point
       oilChangeKM = updatedCar.meterReading - reminderPoint;
-      
+
       // If we've reached or exceeded the reminder point, oil change is needed
       if (oilChangeKM >= 0) {
         needsOilChange = true;
       }
-      
+
       // Show the static reminder point (doesn't change with each reading)
       nextOilChangeKM = reminderPoint;
     }
-    
+
     res.status(200).json({
       status: "success",
       message: "Car meter reading updated successfully",

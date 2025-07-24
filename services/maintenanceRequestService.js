@@ -337,8 +337,25 @@ exports.getMaintenanceRequestById = asyncHandler(async (req, res, next) => {
     return next(new ApiError("Maintenance request not found", 404));
   }
 
+  // Find the last maintenance date for each subcategory for this car (excluding this request)
+  const lastMaintenanceDates = {};
+  if (request.subCategories && request.subCategories.length > 0) {
+    for (const subCat of request.subCategories) {
+      const lastRequest = await MaintenanceRequest.findOne({
+        car: request.car._id,
+        subCategories: subCat._id,
+        _id: { $ne: request._id },
+        status: "completed", // Only consider completed requests
+      })
+        .sort({ createdAt: -1 })
+        .select("createdAt");
+      lastMaintenanceDates[subCat._id] = lastRequest ? lastRequest.createdAt : null;
+    }
+  }
+
   res.status(200).json({
     status: "success",
     data: request,
+    lastMaintenanceDates, // { subCategoryId: lastDate, ... }
   });
 });
