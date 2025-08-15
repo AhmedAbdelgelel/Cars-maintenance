@@ -140,6 +140,36 @@ exports.login = asyncHandler(async (req, res, next) => {
   }
 });
 
+
+exports.deleteAccount = asyncHandler(async (req, res, next) => {
+  // User must be authenticated
+  const user = req.driver || req.admin || req.accountant;
+  if (!user) {
+    return next(new ApiError("Authentication required", 401));
+  }
+
+  // Hard delete: permanently remove the account
+  const userId = user._id;
+  let deletedUser;
+
+  if (req.driver) {
+    deletedUser = await Driver.findByIdAndDelete(userId);
+  } else if (req.admin) {
+    deletedUser = await Admin.findByIdAndDelete(userId);
+  } else if (req.accountant) {
+    deletedUser = await Accountant.findByIdAndDelete(userId);
+  }
+
+  if (!deletedUser) {
+    return next(new ApiError("Account not found", 404));
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Account deleted permanently",
+  });
+});
+
 exports.logout = async (req, res) => {
   res
     .status(200)
