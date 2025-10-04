@@ -1,6 +1,7 @@
 const Driver = require("../models/driverModel");
 const Admin = require("../models/adminModel");
 const Accountant = require("../models/accountantModel");
+const Receiver = require("../models/receiverModel");
 const ApiError = require("../utils/apiError");
 const generateToken = require("../utils/generateToken");
 const asyncHandler = require("express-async-handler");
@@ -70,6 +71,30 @@ exports.register = asyncHandler(async (req, res, next) => {
     return res.status(201).json({ status: "success", token });
   }
 
+  if (role === "receiver") {
+    const { email } = req.body;
+    if (!email) {
+      return next(new ApiError("Email is required for receiver registration", 400));
+    }
+    const exists = await Receiver.exists({ 
+      $or: [{ phoneNumber }, { email: email.toLowerCase().trim() }] 
+    });
+    if (exists) {
+      return next(
+        new ApiError("Receiver with this phone number or email already exists", 400)
+      );
+    }
+    const newReceiver = await Receiver.create({
+      name,
+      password,
+      phoneNumber,
+      email: email.toLowerCase().trim(),
+      role: "receiver",
+    });
+    const token = generateToken(newReceiver._id, "receiver");
+    return res.status(201).json({ status: "success", token });
+  }
+
   const exists = await Driver.exists({
     $or: [{ phoneNumber }, { nationalId }, { licenseNumber }],
   });
@@ -95,10 +120,10 @@ exports.register = asyncHandler(async (req, res, next) => {
 });
 
 exports.login = asyncHandler(async (req, res, next) => {
-  const { phoneNumber, role } = req.body;
+  const { phoneNumber, email, role } = req.body;
 
-  if (!phoneNumber) {
-    return next(new ApiError("Please provide phone number", 400));
+  if (!phoneNumber && !email) {
+    return next(new ApiError("Please provide phone number or email", 400));
   }
 
   let user, token;
@@ -107,7 +132,11 @@ exports.login = asyncHandler(async (req, res, next) => {
     if (!user) {
       return next(new ApiError("Incorrect phone number for admin", 401));
     }
+    if (user.isActive === false) {
+      return next(new ApiError("Your account has been deactivated", 401));
+    }
     token = generateToken(user._id, "admin");
+
     return res
       .status(200)
       .json({ status: "success", token, user, role: "admin" });
@@ -116,14 +145,31 @@ exports.login = asyncHandler(async (req, res, next) => {
     if (!user) {
       return next(new ApiError("Incorrect phone number for accountant", 401));
     }
+    if (user.isActive === false) {
+      return next(new ApiError("Your account has been deactivated", 401));
+    }
     token = generateToken(user._id, "accountant");
     return res
       .status(200)
       .json({ status: "success", token, user, role: "accountant" });
+  } else if (role === "receiver") {
+    // Support both email and phoneNumber for receivers
+    const query = email ? { email: email.toLowerCase().trim() } : { phoneNumber };
+    user = await Receiver.findOne(query);
+    if (!user) {
+      return next(new ApiError("Incorrect credentials for receiver", 401));
+    }
+    if (user.isActive === false) {
+      return next(new ApiError("Your account has been deactivated", 401));
+    }
+    token = generateToken(user._id, "receiver");
+    return res
+      .status(200)
+      .json({ status: "success", token, user, role: "receiver" });
   } else {
     user = await Driver.findOne({ phoneNumber })
       .select(
-        "_id name phoneNumber nationalId licenseNumber address car role createdAt updatedAt"
+        "_id name phoneNumber nationalId licenseNumber address car role isActive createdAt updatedAt"
       )
       .populate({
         path: "car",
@@ -133,13 +179,16 @@ exports.login = asyncHandler(async (req, res, next) => {
     if (!user) {
       return next(new ApiError("Incorrect phone number for driver", 401));
     }
+    if (user.isActive === false) {
+      return next(new ApiError("Your account has been deactivated", 401));
+    }
     token = generateToken(user._id, "driver");
+    console.log(user, token);
     return res
       .status(200)
       .json({ status: "success", token, user, role: "driver" });
   }
 });
-
 
 exports.deleteAccount = asyncHandler(async (req, res, next) => {
   // User must be authenticated

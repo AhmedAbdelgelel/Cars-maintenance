@@ -33,6 +33,10 @@ const driverSchema = new mongoose.Schema({
     enum: ["driver", "admin"],
     default: "driver",
   },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
   maintenanceHistory: [
     {
       type: mongoose.Schema.Types.ObjectId,
