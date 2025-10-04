@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
 const accountantSchema = new mongoose.Schema(
   {
@@ -17,6 +18,7 @@ const accountantSchema = new mongoose.Schema(
       type: String,
       required: true,
       minlength: 8,
+      select: false,
     },
     role: {
       type: String,
@@ -36,5 +38,12 @@ const accountantSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Hash password before saving
+accountantSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+  this.password = await bcrypt.hash(this.password, 12);
+  next();
+});
 
 module.exports = mongoose.model("Accountant", accountantSchema);

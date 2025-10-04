@@ -5,6 +5,7 @@ const Receiver = require("../models/receiverModel");
 const ApiError = require("../utils/apiError");
 const generateToken = require("../utils/generateToken");
 const asyncHandler = require("express-async-handler");
+const bcrypt = require("bcryptjs");
 
 exports.register = asyncHandler(async (req, res, next) => {
   const isMobileRequest =
@@ -74,14 +75,19 @@ exports.register = asyncHandler(async (req, res, next) => {
   if (role === "receiver") {
     const { email } = req.body;
     if (!email) {
-      return next(new ApiError("Email is required for receiver registration", 400));
+      return next(
+        new ApiError("Email is required for receiver registration", 400)
+      );
     }
-    const exists = await Receiver.exists({ 
-      $or: [{ phoneNumber }, { email: email.toLowerCase().trim() }] 
+    const exists = await Receiver.exists({
+      $or: [{ phoneNumber }, { email: email.toLowerCase().trim() }],
     });
     if (exists) {
       return next(
-        new ApiError("Receiver with this phone number or email already exists", 400)
+        new ApiError(
+          "Receiver with this phone number or email already exists",
+          400
+        )
       );
     }
     const newReceiver = await Receiver.create({
@@ -120,48 +126,84 @@ exports.register = asyncHandler(async (req, res, next) => {
 });
 
 exports.login = asyncHandler(async (req, res, next) => {
-  const { phoneNumber, email, role } = req.body;
+  const { phoneNumber, email, role, password } = req.body;
 
   if (!phoneNumber && !email) {
     return next(new ApiError("Please provide phone number or email", 400));
   }
 
+  if (!password) {
+    return next(new ApiError("Please provide password", 400));
+  }
+
   let user, token;
   if (role === "admin") {
-    user = await Admin.findOne({ phoneNumber });
+    user = await Admin.findOne({ phoneNumber }).select("+password");
     if (!user) {
-      return next(new ApiError("Incorrect phone number for admin", 401));
+      return next(new ApiError("Incorrect phone number or password", 401));
     }
+
+    // Validate password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return next(new ApiError("Incorrect phone number or password", 401));
+    }
+
     if (user.isActive === false) {
       return next(new ApiError("Your account has been deactivated", 401));
     }
+
+    // Remove password from response
+    user.password = undefined;
     token = generateToken(user._id, "admin");
 
     return res
       .status(200)
       .json({ status: "success", token, user, role: "admin" });
   } else if (role === "accountant") {
-    user = await Accountant.findOne({ phoneNumber });
+    user = await Accountant.findOne({ phoneNumber }).select("+password");
     if (!user) {
-      return next(new ApiError("Incorrect phone number for accountant", 401));
+      return next(new ApiError("Incorrect phone number or password", 401));
     }
+
+    // Validate password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return next(new ApiError("Incorrect phone number or password", 401));
+    }
+
     if (user.isActive === false) {
       return next(new ApiError("Your account has been deactivated", 401));
     }
+
+    // Remove password from response
+    user.password = undefined;
     token = generateToken(user._id, "accountant");
     return res
       .status(200)
       .json({ status: "success", token, user, role: "accountant" });
   } else if (role === "receiver") {
-    // Support both email and phoneNumber for receivers
-    const query = email ? { email: email.toLowerCase().trim() } : { phoneNumber };
-    user = await Receiver.findOne(query);
+    // Support both email and phoneNumber for receivers (iOS compatibility)
+    const query = email
+      ? { email: email.toLowerCase().trim() }
+      : { phoneNumber };
+    user = await Receiver.findOne(query).select("+password");
     if (!user) {
-      return next(new ApiError("Incorrect credentials for receiver", 401));
+      return next(new ApiError("Incorrect credentials", 401));
     }
+
+    // Validate password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return next(new ApiError("Incorrect credentials", 401));
+    }
+
     if (user.isActive === false) {
       return next(new ApiError("Your account has been deactivated", 401));
     }
+
+    // Remove password from response
+    user.password = undefined;
     token = generateToken(user._id, "receiver");
     return res
       .status(200)
@@ -169,7 +211,7 @@ exports.login = asyncHandler(async (req, res, next) => {
   } else {
     user = await Driver.findOne({ phoneNumber })
       .select(
-        "_id name phoneNumber nationalId licenseNumber address car role isActive createdAt updatedAt"
+        "_id name phoneNumber nationalId licenseNumber address car role isActive password createdAt updatedAt"
       )
       .populate({
         path: "car",
@@ -177,11 +219,23 @@ exports.login = asyncHandler(async (req, res, next) => {
           "brand model plateNumber year color status meterReading lastMeterUpdate createdAt updatedAt drivers",
       });
     if (!user) {
-      return next(new ApiError("Incorrect phone number for driver", 401));
+      return next(new ApiError("Incorrect phone number or password", 401));
     }
+
+    // Validate password only if it exists
+    if (user.password) {
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return next(new ApiError("Incorrect phone number or password", 401));
+      }
+    }
+
     if (user.isActive === false) {
       return next(new ApiError("Your account has been deactivated", 401));
     }
+
+    // Remove password from response
+    user.password = undefined;
     token = generateToken(user._id, "driver");
     console.log(user, token);
     return res
@@ -222,6 +276,5 @@ exports.deleteAccount = asyncHandler(async (req, res, next) => {
 exports.logout = async (req, res) => {
   res
     .status(200)
-    .clearCookie("jwt")
     .json({ status: "success", message: "Logged out successfully" });
 };
