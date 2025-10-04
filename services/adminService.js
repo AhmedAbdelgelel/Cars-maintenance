@@ -21,11 +21,11 @@ exports.register = asyncHandler(async (req, res, next) => {
     );
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  // Password will be hashed automatically by the model's pre-save hook
   const createdAdmin = await Admin.create({
     name,
     email,
-    password: hashedPassword,
+    password,
     phoneNumber,
   });
 
@@ -48,22 +48,26 @@ exports.login = asyncHandler(async (req, res, next) => {
   }
 
   // Try to find user in Admin model
-  let user = await Admin.findOne({ email }).select("-__v");
+  let user = await Admin.findOne({ email }).select("+password -__v");
   let role = "admin";
 
   // If not found, try Accountant model
   if (!user) {
-    user = await Accountant.findOne({ email }).select("-__v");
+    user = await Accountant.findOne({ email }).select("+password -__v");
     role = "accountant";
   }
 
   if (!user) {
-    return next(new ApiError("Incorrect email or password", 401));
+    return next(new ApiError("Invalid credentials", 401));
+  }
+
+  if (!user.password) {
+    return next(new ApiError("Password not set for this user. Please contact admin.", 401));
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    return next(new ApiError("Incorrect email or password", 401));
+    return next(new ApiError("Invalid credentials", 401));
   }
 
   if (!user.isActive) {

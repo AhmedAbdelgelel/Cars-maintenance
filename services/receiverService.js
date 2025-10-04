@@ -1,5 +1,4 @@
 const Receiver = require("../models/receiverModel");
-const Accountant = require("../models/accountantModel");
 const MaintenanceRequest = require("../models/maintenanceRequestModel");
 const Notification = require("../models/notificationModel");
 const ApiError = require("../utils/apiError");
@@ -162,12 +161,12 @@ exports.createReceiver = asyncHandler(async (req, res, next) => {
       new ApiError("Receiver with this phone or email already exists", 400)
     );
   }
-  const hashedPassword = await bcrypt.hash(password, 12);
+  // Password will be hashed automatically by the model's pre-save hook
   const receiver = await Receiver.create({
     name,
     email,
     phoneNumber,
-    password: hashedPassword,
+    password,
   });
   res.status(201).json({
     status: "success",
@@ -194,19 +193,32 @@ exports.loginReceiver = asyncHandler(async (req, res, next) => {
   if (!phoneNumber || !password) {
     return next(new ApiError("Please provide phone number and password", 400));
   }
-  const receiver = await Receiver.findOne({ phoneNumber });
+  const receiver = await Receiver.findOne({ phoneNumber }).select('+password');
   if (!receiver) {
-    return next(new ApiError("Receiver not found", 401));
+    return next(new ApiError("Invalid credentials", 401));
+  }
+
+  if (!receiver.password) {
+    return next(new ApiError("Password not set for this receiver. Please contact admin.", 401));
+  }
+
+  if (!receiver.isActive) {
+    return next(new ApiError("Your account has been deactivated. Please contact admin.", 401));
   }
 
   const isMatch = await bcrypt.compare(password, receiver.password);
   if (!isMatch) {
-    return next(new ApiError("Incorrect password", 401));
+    return next(new ApiError("Invalid credentials", 401));
   }
+
   const token = generateToken(receiver._id, "receiver");
+  
+  // Remove password from response
+  const { password: pwd, ...safeReceiver } = receiver.toObject();
+  
   res.status(200).json({
     status: "success",
-    token: token,
-    receiver: receiver,
+    token,
+    data: safeReceiver,
   });
 });
