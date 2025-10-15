@@ -348,3 +348,95 @@ exports.deleteMaintenanceRecord = asyncHandler(async (req, res, next) => {
     message: "Maintenance record deleted successfully",
   });
 });
+
+// Dashboard endpoint to get last maintenance history
+exports.getLastMaintenanceHistoryForDashboard = asyncHandler(async (req, res, next) => {
+  const MaintenanceRequest = require("../models/maintenanceRequestModel");
+  
+  // Get recent maintenance records (completed ones)
+  const recentMaintenanceRecords = await Maintenance.find()
+    .select("-__v")
+    .populate({
+      path: "car",
+      select: "_id plateNumber brand model year color status meterReading lastMeterUpdate",
+    })
+    .populate({
+      path: "driver",
+      select: "_id name phoneNumber nationalId licenseNumber",
+    })
+    .populate({
+      path: "subCategories",
+      select: "name description",
+      populate: {
+        path: "category",
+        select: "name",
+      },
+    })
+    .sort({ date: -1 })
+    .limit(10);
+
+  // Get recent completed maintenance requests
+  const recentCompletedRequests = await MaintenanceRequest.find({
+    status: "completed"
+  })
+    .populate("driver", "name phoneNumber")
+    .populate("car", "brand model plateNumber")
+    .populate("subCategories", "name description")
+    .populate("receiver", "name phoneNumber")
+    .sort({ updatedAt: -1 })
+    .limit(10);
+
+  // Get maintenance statistics
+  const maintenanceStats = await Maintenance.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalRecords: { $sum: 1 },
+        totalCost: { $sum: "$cost" },
+        totalMechanicCost: { $sum: "$mechanicCost" },
+        avgCost: { $avg: "$cost" },
+        avgMechanicCost: { $avg: "$mechanicCost" }
+      }
+    }
+  ]);
+
+  // Get recent activity (last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const recentActivity = await Maintenance.find({
+    date: { $gte: thirtyDaysAgo }
+  }).countDocuments();
+
+  const completedRequestsCount = await MaintenanceRequest.find({
+    status: "completed",
+    updatedAt: { $gte: thirtyDaysAgo }
+  }).countDocuments();
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      recentMaintenanceRecords: {
+        results: recentMaintenanceRecords.length,
+        data: recentMaintenanceRecords
+      },
+      recentCompletedRequests: {
+        results: recentCompletedRequests.length,
+        data: recentCompletedRequests
+      },
+      statistics: {
+        totalStats: maintenanceStats.length > 0 ? maintenanceStats[0] : {
+          totalRecords: 0,
+          totalCost: 0,
+          totalMechanicCost: 0,
+          avgCost: 0,
+          avgMechanicCost: 0
+        },
+        recentActivity: {
+          maintenanceRecordsLast30Days: recentActivity,
+          completedRequestsLast30Days: completedRequestsCount
+        }
+      }
+    }
+  });
+});

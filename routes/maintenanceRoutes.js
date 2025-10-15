@@ -7,11 +7,16 @@ const {
   updateMaintenanceRecord,
   deleteMaintenanceRecord,
   getMaintenanceCostRecords,
+  getLastMaintenanceHistoryForDashboard,
 } = require("../services/maintenanceService");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 router
   .route("/cost")
   .get(protect, restrictTo("admin", "accountant"), getMaintenanceCostRecords);
+
+router
+  .route("/dashboard/history")
+  .get(protect, restrictTo("admin", "accountant"), getLastMaintenanceHistoryForDashboard);
 
 router
   .route("/")

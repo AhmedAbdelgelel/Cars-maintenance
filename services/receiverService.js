@@ -187,6 +187,52 @@ exports.getAllReceivers = asyncHandler(async (req, res) => {
   });
 });
 
+// Receiver gets last maintenance history
+exports.getLastMaintenanceHistory = asyncHandler(async (req, res, next) => {
+  const receiver = req.receiver;
+
+  if (!receiver) {
+    return next(new ApiError("No receiver found in request context", 401));
+  }
+
+  // Get the latest maintenance records handled by this receiver
+  const Maintenance = require("../models/maintenanceModel");
+  const MaintenanceRequest = require("../models/maintenanceRequestModel");
+
+  // Find completed maintenance requests handled by this receiver
+  const completedRequests = await MaintenanceRequest.find({
+    receiver: receiver._id,
+    status: "completed"
+  })
+    .populate("driver", "name phoneNumber")
+    .populate("car", "brand model plateNumber")
+    .populate("subCategories", "name description")
+    .sort({ updatedAt: -1 })
+    .limit(10); // Get last 10 maintenance records
+
+  // Also get actual maintenance records
+  const maintenanceRecords = await Maintenance.find()
+    .populate("driver", "name phoneNumber")
+    .populate("car", "brand model plateNumber")
+    .populate("subCategories", "name description")
+    .sort({ date: -1 })
+    .limit(10); // Get last 10 maintenance records
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      completedRequests: {
+        results: completedRequests.length,
+        data: completedRequests
+      },
+      maintenanceRecords: {
+        results: maintenanceRecords.length,
+        data: maintenanceRecords
+      }
+    },
+  });
+});
+
 // Receiver login
 exports.loginReceiver = asyncHandler(async (req, res, next) => {
   const { phoneNumber, password } = req.body;

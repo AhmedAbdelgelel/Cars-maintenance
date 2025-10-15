@@ -9,6 +9,7 @@ const {
   createReceiver,
   getAllReceivers,
   loginReceiver,
+  getLastMaintenanceHistory,
 } = require("../services/receiverService");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
@@ -25,6 +26,12 @@ router.get(
   protect,
   restrictTo("receiver"),
   getAcceptedRequests
+);
+router.get(
+  "/maintenance-history",
+  protect,
+  restrictTo("receiver"),
+  getLastMaintenanceHistory
 );
 router.patch(
   "/requests/:requestId/accept",
