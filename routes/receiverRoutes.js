@@ -9,8 +9,6 @@ const {
   createReceiver,
   getAllReceivers,
   loginReceiver,
-  getCompletedRequests,
-  getAllCompletedRequests,
 } = require("../services/receiverService");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
@@ -27,12 +25,6 @@ router.get(
   protect,
   restrictTo("receiver"),
   getAcceptedRequests
-);
-router.get(
-  "/completed-requests",
-  protect,
-  restrictTo("receiver"),
-  getCompletedRequests
 );
 router.patch(
   "/requests/:requestId/accept",
@@ -51,11 +43,5 @@ router.post("/login", loginReceiver);
 // Admin endpoints for receiver management
 router.post("/", protect, restrictTo("admin"), createReceiver);
 router.get("/", protect, restrictTo("admin"), getAllReceivers);
-router.get(
-  "/all-completed-requests",
-  protect,
-  restrictTo("admin"),
-  getAllCompletedRequests
-);
 
 module.exports = router;

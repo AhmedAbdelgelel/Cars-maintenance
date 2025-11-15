@@ -62,7 +62,9 @@ exports.login = asyncHandler(async (req, res, next) => {
   }
 
   if (!user.password) {
-    return next(new ApiError("Password not set for this user. Please contact admin.", 401));
+    return next(
+      new ApiError("Password not set for this user. Please contact admin.", 401)
+    );
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
