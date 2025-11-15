@@ -187,49 +187,163 @@ exports.getAllReceivers = asyncHandler(async (req, res) => {
   });
 });
 
-// Receiver gets last maintenance history
-exports.getLastMaintenanceHistory = asyncHandler(async (req, res, next) => {
+// Receiver gets completed maintenance requests with filters
+exports.getCompletedRequests = asyncHandler(async (req, res, next) => {
   const receiver = req.receiver;
 
   if (!receiver) {
     return next(new ApiError("No receiver found in request context", 401));
   }
 
-  // Get the latest maintenance records handled by this receiver
-  const Maintenance = require("../models/maintenanceModel");
-  const MaintenanceRequest = require("../models/maintenanceRequestModel");
+  const { startDate, endDate, driverName, subCategoryName, plateNumber, page = 1, limit = 20 } = req.query;
 
-  // Find completed maintenance requests handled by this receiver
-  const completedRequests = await MaintenanceRequest.find({
+  // Build query
+  const query = {
     receiver: receiver._id,
-    status: "completed"
-  })
-    .populate("driver", "name phoneNumber")
-    .populate("car", "brand model plateNumber")
-    .populate("subCategories", "name description")
-    .sort({ updatedAt: -1 })
-    .limit(10); // Get last 10 maintenance records
+    status: "completed",
+  };
 
-  // Also get actual maintenance records
-  const maintenanceRecords = await Maintenance.find()
+  // Date filter
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) {
+      query.createdAt.$gte = new Date(startDate);
+    }
+    if (endDate) {
+      // Add one day to include the entire end date
+      const end = new Date(endDate);
+      end.setDate(end.getDate() + 1);
+      query.createdAt.$lt = end;
+    }
+  }
+
+  // Get requests with populated fields
+  let requestsQuery = MaintenanceRequest.find(query)
     .populate("driver", "name phoneNumber")
-    .populate("car", "brand model plateNumber")
+    .populate("car", "brand model plateNumber year color")
     .populate("subCategories", "name description")
-    .sort({ date: -1 })
-    .limit(10); // Get last 10 maintenance records
+    .populate("receiver", "name email phoneNumber")
+    .sort({ createdAt: -1 });
+
+  // Execute query to get all matching documents for filtering
+  let requests = await requestsQuery;
+
+  // Apply additional filters on populated data
+  if (driverName) {
+    const searchName = driverName.toLowerCase();
+    requests = requests.filter(req => 
+      req.driver?.name?.toLowerCase().includes(searchName)
+    );
+  }
+
+  if (subCategoryName) {
+    const searchSubCat = subCategoryName.toLowerCase();
+    requests = requests.filter(req => 
+      req.subCategories?.some(sub => 
+        sub.name?.toLowerCase().includes(searchSubCat)
+      )
+    );
+  }
+
+  if (plateNumber) {
+    const searchPlate = plateNumber.toLowerCase();
+    requests = requests.filter(req => 
+      req.car?.plateNumber?.toLowerCase().includes(searchPlate)
+    );
+  }
+
+  // Pagination
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const paginatedRequests = requests.slice(skip, skip + parseInt(limit));
+  const total = requests.length;
 
   res.status(200).json({
     status: "success",
-    data: {
-      completedRequests: {
-        results: completedRequests.length,
-        data: completedRequests
-      },
-      maintenanceRecords: {
-        results: maintenanceRecords.length,
-        data: maintenanceRecords
-      }
-    },
+    results: paginatedRequests.length,
+    total: total,
+    page: parseInt(page),
+    pages: Math.ceil(total / parseInt(limit)),
+    data: paginatedRequests,
+  });
+});
+
+// Admin gets all completed maintenance requests with filters
+exports.getAllCompletedRequests = asyncHandler(async (req, res, next) => {
+  const { startDate, endDate, driverName, subCategoryName, plateNumber, receiverName, page = 1, limit = 20 } = req.query;
+
+  // Build query
+  const query = {
+    status: "completed",
+  };
+
+  // Date filter
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) {
+      query.createdAt.$gte = new Date(startDate);
+    }
+    if (endDate) {
+      // Add one day to include the entire end date
+      const end = new Date(endDate);
+      end.setDate(end.getDate() + 1);
+      query.createdAt.$lt = end;
+    }
+  }
+
+  // Get requests with populated fields
+  let requestsQuery = MaintenanceRequest.find(query)
+    .populate("driver", "name phoneNumber")
+    .populate("car", "brand model plateNumber year color")
+    .populate("subCategories", "name description")
+    .populate("receiver", "name email phoneNumber")
+    .sort({ createdAt: -1 });
+
+  // Execute query to get all matching documents for filtering
+  let requests = await requestsQuery;
+
+  // Apply additional filters on populated data
+  if (driverName) {
+    const searchName = driverName.toLowerCase();
+    requests = requests.filter(req => 
+      req.driver?.name?.toLowerCase().includes(searchName)
+    );
+  }
+
+  if (subCategoryName) {
+    const searchSubCat = subCategoryName.toLowerCase();
+    requests = requests.filter(req => 
+      req.subCategories?.some(sub => 
+        sub.name?.toLowerCase().includes(searchSubCat)
+      )
+    );
+  }
+
+  if (plateNumber) {
+    const searchPlate = plateNumber.toLowerCase();
+    requests = requests.filter(req => 
+      req.car?.plateNumber?.toLowerCase().includes(searchPlate)
+    );
+  }
+
+  if (receiverName) {
+    const searchReceiver = receiverName.toLowerCase();
+    requests = requests.filter(req => 
+      req.receiver?.name?.toLowerCase().includes(searchReceiver)
+    );
+  }
+
+  // Pagination
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const paginatedRequests = requests.slice(skip, skip + parseInt(limit));
+  const total = requests.length;
+
+  res.status(200).json({
+    status: "success",
+    results: paginatedRequests.length,
+    total: total,
+    page: parseInt(page),
+    pages: Math.ceil(total / parseInt(limit)),
+    data: paginatedRequests,
   });
 });
 

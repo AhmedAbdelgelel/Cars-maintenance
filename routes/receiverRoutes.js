@@ -9,7 +9,8 @@ const {
   createReceiver,
   getAllReceivers,
   loginReceiver,
-  getLastMaintenanceHistory,
+  getCompletedRequests,
+  getAllCompletedRequests,
 } = require("../services/receiverService");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
@@ -28,10 +29,10 @@ router.get(
   getAcceptedRequests
 );
 router.get(
-  "/maintenance-history",
+  "/completed-requests",
   protect,
   restrictTo("receiver"),
-  getLastMaintenanceHistory
+  getCompletedRequests
 );
 router.patch(
   "/requests/:requestId/accept",
@@ -50,5 +51,11 @@ router.post("/login", loginReceiver);
 // Admin endpoints for receiver management
 router.post("/", protect, restrictTo("admin"), createReceiver);
 router.get("/", protect, restrictTo("admin"), getAllReceivers);
+router.get(
+  "/all-completed-requests",
+  protect,
+  restrictTo("admin"),
+  getAllCompletedRequests
+);
 
 module.exports = router;
