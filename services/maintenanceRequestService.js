@@ -190,7 +190,12 @@ exports.getMaintenanceRequests = asyncHandler(async (req, res, next) => {
 // Get under review maintenance requests (admin only)
 exports.getUnderReviewMaintenanceRequests = asyncHandler(
   async (req, res, next) => {
-    if (!((req.admin && req.admin.role === "admin") || (req.accountant && req.accountant.role === "accountant"))) {
+    if (
+      !(
+        (req.admin && req.admin.role === "admin") ||
+        (req.accountant && req.accountant.role === "accountant")
+      )
+    ) {
       return next(new ApiError("Admin or Accountant access required", 403));
     }
     const requests = await MaintenanceRequest.find({ status: "underReview" })
@@ -349,7 +354,9 @@ exports.getMaintenanceRequestById = asyncHandler(async (req, res, next) => {
       })
         .sort({ createdAt: -1 })
         .select("createdAt");
-      lastMaintenanceDates[subCat._id] = lastRequest ? lastRequest.createdAt : null;
+      lastMaintenanceDates[subCat._id] = lastRequest
+        ? lastRequest.createdAt
+        : null;
     }
   }
 
@@ -357,5 +364,110 @@ exports.getMaintenanceRequestById = asyncHandler(async (req, res, next) => {
     status: "success",
     data: request,
     lastMaintenanceDates, // { subCategoryId: lastDate, ... }
+  });
+});
+
+// Get completed maintenance requests with filters (Receiver and Admin)
+exports.getCompletedRequests = asyncHandler(async (req, res, next) => {
+  const user = req.receiver || req.admin || req.accountant;
+  const userRole = req.receiver
+    ? "receiver"
+    : req.admin
+    ? "admin"
+    : "accountant";
+
+  if (!user) {
+    return next(new ApiError("Authentication required", 401));
+  }
+
+  const {
+    date,
+    driverName,
+    subCategoryName,
+    plateNumber,
+    receiverName,
+    page = 1,
+    limit = 20,
+  } = req.query;
+
+  // Build query
+  const query = {
+    status: "completed",
+  };
+
+  // If receiver, only show their completed requests
+  if (userRole === "receiver") {
+    query.receiver = user._id;
+  }
+
+  // Date filter - single date (matches any request created on that day)
+  if (date) {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    query.createdAt = {
+      $gte: startOfDay,
+      $lte: endOfDay,
+    };
+  }
+
+  // Get requests with populated fields
+  let requestsQuery = MaintenanceRequest.find(query)
+    .populate("driver", "name phoneNumber")
+    .populate("car", "brand model plateNumber year color")
+    .populate("subCategories", "name description")
+    .populate("receiver", "name email phoneNumber")
+    .sort({ createdAt: -1 });
+
+  // Execute query to get all matching documents for filtering
+  let requests = await requestsQuery;
+
+  // Apply additional filters on populated data
+  if (driverName) {
+    const searchName = driverName.toLowerCase();
+    requests = requests.filter((req) =>
+      req.driver?.name?.toLowerCase().includes(searchName)
+    );
+  }
+
+  if (subCategoryName) {
+    const searchSubCat = subCategoryName.toLowerCase();
+    requests = requests.filter((req) =>
+      req.subCategories?.some((sub) =>
+        sub.name?.toLowerCase().includes(searchSubCat)
+      )
+    );
+  }
+
+  if (plateNumber) {
+    const searchPlate = plateNumber.toLowerCase();
+    requests = requests.filter((req) =>
+      req.car?.plateNumber?.toLowerCase().includes(searchPlate)
+    );
+  }
+
+  // Admin/Accountant can filter by receiver name
+  if ((userRole === "admin" || userRole === "accountant") && receiverName) {
+    const searchReceiver = receiverName.toLowerCase();
+    requests = requests.filter((req) =>
+      req.receiver?.name?.toLowerCase().includes(searchReceiver)
+    );
+  }
+
+  // Pagination
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const paginatedRequests = requests.slice(skip, skip + parseInt(limit));
+  const total = requests.length;
+
+  res.status(200).json({
+    status: "success",
+    results: paginatedRequests.length,
+    total: total,
+    page: parseInt(page),
+    pages: Math.ceil(total / parseInt(limit)),
+    data: paginatedRequests,
   });
 });

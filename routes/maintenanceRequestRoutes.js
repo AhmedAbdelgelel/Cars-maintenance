@@ -9,7 +9,8 @@ const {
   getAllMaintenanceRequests,
   completeMaintenanceRequest,
   getMaintenanceRequestById,
-  getUnderReviewMaintenanceRequests, // <-- add new endpoint
+  getUnderReviewMaintenanceRequests,
+  getCompletedRequests,
 } = require("../services/maintenanceRequestService");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
@@ -24,15 +25,6 @@ router.patch(
   uploadReceipt
 );
 
-// Driver and Admin endpoints
-router.get("/", protect, restrictTo("admin", "driver", "accountant"), getMaintenanceRequests);
-router.patch(
-  "/:requestId/complete",
-  protect,
-  restrictTo("admin"),
-  completeMaintenanceRequest
-);
-
 // Admin and Accountant endpoint to get under review requests
 router.get(
   "/under-review",
@@ -41,7 +33,29 @@ router.get(
   getUnderReviewMaintenanceRequests
 );
 
-// General endpoints
+// Receiver and Admin endpoint to get completed requests with filters
+router.get(
+  "/completed",
+  protect,
+  restrictTo("admin", "receiver", "accountant"),
+  getCompletedRequests
+);
+
+// Driver and Admin endpoints
+router.get(
+  "/",
+  protect,
+  restrictTo("admin", "driver", "accountant"),
+  getMaintenanceRequests
+);
+router.patch(
+  "/:requestId/complete",
+  protect,
+  restrictTo("admin"),
+  completeMaintenanceRequest
+);
+
+// General endpoints (MUST BE LAST - catches all /:id)
 router.get(
   "/:id",
   protect,

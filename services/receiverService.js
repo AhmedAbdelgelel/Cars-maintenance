@@ -187,183 +187,33 @@ exports.getAllReceivers = asyncHandler(async (req, res) => {
   });
 });
 
-// Receiver gets completed maintenance requests with filters
-exports.getCompletedRequests = asyncHandler(async (req, res, next) => {
-  const receiver = req.receiver;
-
-  if (!receiver) {
-    return next(new ApiError("No receiver found in request context", 401));
-  }
-
-  const { startDate, endDate, driverName, subCategoryName, plateNumber, page = 1, limit = 20 } = req.query;
-
-  // Build query
-  const query = {
-    receiver: receiver._id,
-    status: "completed",
-  };
-
-  // Date filter
-  if (startDate || endDate) {
-    query.createdAt = {};
-    if (startDate) {
-      query.createdAt.$gte = new Date(startDate);
-    }
-    if (endDate) {
-      // Add one day to include the entire end date
-      const end = new Date(endDate);
-      end.setDate(end.getDate() + 1);
-      query.createdAt.$lt = end;
-    }
-  }
-
-  // Get requests with populated fields
-  let requestsQuery = MaintenanceRequest.find(query)
-    .populate("driver", "name phoneNumber")
-    .populate("car", "brand model plateNumber year color")
-    .populate("subCategories", "name description")
-    .populate("receiver", "name email phoneNumber")
-    .sort({ createdAt: -1 });
-
-  // Execute query to get all matching documents for filtering
-  let requests = await requestsQuery;
-
-  // Apply additional filters on populated data
-  if (driverName) {
-    const searchName = driverName.toLowerCase();
-    requests = requests.filter(req => 
-      req.driver?.name?.toLowerCase().includes(searchName)
-    );
-  }
-
-  if (subCategoryName) {
-    const searchSubCat = subCategoryName.toLowerCase();
-    requests = requests.filter(req => 
-      req.subCategories?.some(sub => 
-        sub.name?.toLowerCase().includes(searchSubCat)
-      )
-    );
-  }
-
-  if (plateNumber) {
-    const searchPlate = plateNumber.toLowerCase();
-    requests = requests.filter(req => 
-      req.car?.plateNumber?.toLowerCase().includes(searchPlate)
-    );
-  }
-
-  // Pagination
-  const skip = (parseInt(page) - 1) * parseInt(limit);
-  const paginatedRequests = requests.slice(skip, skip + parseInt(limit));
-  const total = requests.length;
-
-  res.status(200).json({
-    status: "success",
-    results: paginatedRequests.length,
-    total: total,
-    page: parseInt(page),
-    pages: Math.ceil(total / parseInt(limit)),
-    data: paginatedRequests,
-  });
-});
-
-// Admin gets all completed maintenance requests with filters
-exports.getAllCompletedRequests = asyncHandler(async (req, res, next) => {
-  const { startDate, endDate, driverName, subCategoryName, plateNumber, receiverName, page = 1, limit = 20 } = req.query;
-
-  // Build query
-  const query = {
-    status: "completed",
-  };
-
-  // Date filter
-  if (startDate || endDate) {
-    query.createdAt = {};
-    if (startDate) {
-      query.createdAt.$gte = new Date(startDate);
-    }
-    if (endDate) {
-      // Add one day to include the entire end date
-      const end = new Date(endDate);
-      end.setDate(end.getDate() + 1);
-      query.createdAt.$lt = end;
-    }
-  }
-
-  // Get requests with populated fields
-  let requestsQuery = MaintenanceRequest.find(query)
-    .populate("driver", "name phoneNumber")
-    .populate("car", "brand model plateNumber year color")
-    .populate("subCategories", "name description")
-    .populate("receiver", "name email phoneNumber")
-    .sort({ createdAt: -1 });
-
-  // Execute query to get all matching documents for filtering
-  let requests = await requestsQuery;
-
-  // Apply additional filters on populated data
-  if (driverName) {
-    const searchName = driverName.toLowerCase();
-    requests = requests.filter(req => 
-      req.driver?.name?.toLowerCase().includes(searchName)
-    );
-  }
-
-  if (subCategoryName) {
-    const searchSubCat = subCategoryName.toLowerCase();
-    requests = requests.filter(req => 
-      req.subCategories?.some(sub => 
-        sub.name?.toLowerCase().includes(searchSubCat)
-      )
-    );
-  }
-
-  if (plateNumber) {
-    const searchPlate = plateNumber.toLowerCase();
-    requests = requests.filter(req => 
-      req.car?.plateNumber?.toLowerCase().includes(searchPlate)
-    );
-  }
-
-  if (receiverName) {
-    const searchReceiver = receiverName.toLowerCase();
-    requests = requests.filter(req => 
-      req.receiver?.name?.toLowerCase().includes(searchReceiver)
-    );
-  }
-
-  // Pagination
-  const skip = (parseInt(page) - 1) * parseInt(limit);
-  const paginatedRequests = requests.slice(skip, skip + parseInt(limit));
-  const total = requests.length;
-
-  res.status(200).json({
-    status: "success",
-    results: paginatedRequests.length,
-    total: total,
-    page: parseInt(page),
-    pages: Math.ceil(total / parseInt(limit)),
-    data: paginatedRequests,
-  });
-});
-
 // Receiver login
 exports.loginReceiver = asyncHandler(async (req, res, next) => {
   const { phoneNumber, password } = req.body;
   if (!phoneNumber || !password) {
     return next(new ApiError("Please provide phone number and password", 400));
   }
-  const receiver = await Receiver.findOne({ phoneNumber }).select('+password');
+  const receiver = await Receiver.findOne({ phoneNumber }).select("+password");
   if (!receiver) {
     return next(new ApiError("Invalid credentials", 401));
   }
 
   if (!receiver.password) {
-    return next(new ApiError("Password not set for this receiver. Please contact admin.", 401));
+    return next(
+      new ApiError(
+        "Password not set for this receiver. Please contact admin.",
+        401
+      )
+    );
   }
 
   if (!receiver.isActive) {
-    return next(new ApiError("Your account has been deactivated. Please contact admin.", 401));
+    return next(
+      new ApiError(
+        "Your account has been deactivated. Please contact admin.",
+        401
+      )
+    );
   }
 
   const isMatch = await bcrypt.compare(password, receiver.password);
@@ -372,10 +222,10 @@ exports.loginReceiver = asyncHandler(async (req, res, next) => {
   }
 
   const token = generateToken(receiver._id, "receiver");
-  
+
   // Remove password from response
   const { password: pwd, ...safeReceiver } = receiver.toObject();
-  
+
   res.status(200).json({
     status: "success",
     token,
